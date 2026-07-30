@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>옴의 법칙 탐구 & 교사 대시보드 (Firebase 연동)</title>
+  <title>옴의 법칙 탐구 & 교사 대시보드 (Firebase & AI 피드백 연동)</title>
   <!-- Tailwind CSS & Chart.js CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -33,6 +33,10 @@
         </span>
       </div>
       <div class="flex items-center gap-3">
+        <!-- AI Key Settings (Teacher Only) -->
+        <button id="apiKeyBtn" onclick="openApiKeyModal()" class="hidden px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all flex items-center gap-1">
+          <i class="fa-solid fa-key"></i> AI API Key 설정
+        </button>
         <button onclick="switchView('student')" id="tab-student" class="px-3.5 py-1.5 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all">
           <i class="fa-solid fa-user-graduate me-1"></i> 학생용 탐구
         </button>
@@ -214,9 +218,9 @@
     <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div>
         <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-chalkboard-user text-indigo-600"></i> Firebase 실시간 모둠 모니터링 & 피드백
+          <i class="fa-solid fa-chalkboard-user text-indigo-600"></i> Firebase 실시간 모둠 모니터링 & AI 피드백
         </h2>
-        <p class="text-xs text-slate-500 mt-1">Firebase DB와 실시간 연동되어 모둠별 제출 현황이 자동으로 동기화됩니다.</p>
+        <p class="text-xs text-slate-500 mt-1">학생들의 제출 데이터를 실시간으로 모니터링하고 AI 피드백 버튼으로 맞춤 피드백을 생성하세요.</p>
       </div>
       <button onclick="downloadCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-lg shadow transition-all flex items-center gap-2">
         <i class="fa-solid fa-file-csv"></i> 학생 데이터 CSV 내려받기
@@ -229,7 +233,7 @@
     </div>
   </main>
 
-  <!-- 비밀번호 인증 모달 -->
+  <!-- 교사 인증 모달 -->
   <div id="passwordModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border border-slate-100">
       <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
@@ -248,9 +252,26 @@
     </div>
   </div>
 
+  <!-- AI API Key 설정 모달 -->
+  <div id="apiKeyModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center border border-slate-100">
+      <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
+        <i class="fa-solid fa-wand-magic-sparkles"></i>
+      </div>
+      <h3 class="text-lg font-bold text-slate-800 mb-1">Gemini AI API Key 설정</h3>
+      <p class="text-xs text-slate-500 mb-4">자동 피드백 생성을 위한 Google AI Studio API 키를 입력해주세요.</p>
+      
+      <input type="text" id="geminiApiKeyInput" placeholder="API Key 입력 (예: AIzaSy...)" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-indigo-600 mb-4">
+      
+      <div class="flex gap-2">
+        <button onclick="closeApiKeyModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-all">취소</button>
+        <button onclick="saveApiKey()" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow transition-all">저장하기</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Firebase Integration Script -->
   <script>
-    // 싱가포르 리전 URL이 반영된 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyBwVd1wiSjC0P1aSYvt_gO95YzTi16reSo",
       authDomain: "ejje-d0631.firebaseapp.com",
@@ -265,6 +286,9 @@
     firebase.initializeApp(firebaseConfig);
     const rtdb = firebase.database();
     const firestore = firebase.firestore();
+
+    // 추후 전달받으실 API Key를 이 변수에 넣거나 화면 상단 설정창에서 등록하실 수 있습니다.
+    window.GEMINI_API_KEY = localStorage.getItem("GEMINI_API_KEY") || "";
 
     window.groupSubmissions = {
       "1": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
@@ -352,7 +376,7 @@
         rtdb.ref('groups/' + groupNum).set(payload),
         firestore.collection('groups').doc(groupNum).set(payload)
       ]).then(() => {
-        showNotification(`${groupNum}모둠 데이터 제출이 싱가포르 RTDB에 전송되었습니다!`);
+        showNotification(`${groupNum}모둠 데이터 제출이 확인되었습니다!`);
       }).catch((err) => {
         showNotification(`${groupNum}모둠 제출 완료 (화면 반영 확인됨)`);
       });
@@ -370,6 +394,87 @@
       ]).then(() => {
         showNotification(`${groupNum}모둠 피드백이 전송되었습니다.`);
       });
+    }
+
+    // AI API Key Modal Controls
+    function openApiKeyModal() {
+      document.getElementById('geminiApiKeyInput').value = window.GEMINI_API_KEY;
+      document.getElementById('apiKeyModal').classList.remove('hidden');
+    }
+
+    function closeApiKeyModal() {
+      document.getElementById('apiKeyModal').classList.add('hidden');
+    }
+
+    function saveApiKey() {
+      const key = document.getElementById('geminiApiKeyInput').value.trim();
+      window.GEMINI_API_KEY = key;
+      localStorage.setItem("GEMINI_API_KEY", key);
+      closeApiKeyModal();
+      showNotification("API Key가 저장되었습니다!");
+    }
+
+    // AI 자동 피드백 생성 함수
+    async function generateAIFeedback(groupNum) {
+      const data = window.groupSubmissions[groupNum];
+      if (!data || !data.name || data.name === "") {
+        showNotification("해당 모둠의 제출 데이터가 없습니다.");
+        return;
+      }
+
+      const apiKey = window.GEMINI_API_KEY;
+      if (!apiKey) {
+        openApiKeyModal();
+        showNotification("AI 피드백을 생성하려면 API Key를 설정해야 합니다.");
+        return;
+      }
+
+      const feedbackBtn = document.getElementById(`aiBtn-${groupNum}`);
+      if (feedbackBtn) {
+        feedbackBtn.disabled = true;
+        feedbackBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> 생성 중...`;
+      }
+
+      const promptText = `
+너는 중학교 2학년 과학 교사야. 학생들이 옴의 법칙(전류, 전압, 저항 사이의 관계) 실험 후 제출한 데이터를 바탕으로 친절하고 도움이 되는 과정을 강조하는 피드백을 2-3문장으로 작성해줘.
+
+[학생 제출 데이터]
+- 모둠: ${groupNum}모둠
+- 모둠원: ${data.name}
+- 실험 회로: ${data.circuit} 연결
+- 측정 전압/합성저항/전류: ${data.v}V / ${data.r}Ω / ${data.i}A
+- 수집된 측정점 개수: ${data.points ? data.points.length : 0}개 지점
+- 학생 결론: "${data.conclusion}"
+
+피드백은 칭찬과 함께 핵심 유도 질문이나 옴의 법칙 원리(전압과 전류는 비례, 저항과 전류는 반비례)에 대한 정리를 담아 격려하는 말투로 작성해줘.
+`;
+
+      try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: promptText }] }]
+          })
+        });
+
+        const resData = await response.json();
+        if (resData.candidates && resData.candidates[0].content.parts[0].text) {
+          const aiText = "[AI 맞춤 피드백] " + resData.candidates[0].content.parts[0].text.trim();
+          document.getElementById(`feedback-${groupNum}`).value = aiText;
+          showNotification(`${groupNum}모둠 AI 피드백이 생성되었습니다!`);
+        } else {
+          showNotification("AI 답변 생성 실패: API Key를 확인하세요.");
+        }
+      } catch (error) {
+        console.error("AI Error:", error);
+        showNotification("AI 호출 중 오류가 발생했습니다.");
+      } finally {
+        if (feedbackBtn) {
+          feedbackBtn.disabled = false;
+          feedbackBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> AI 피드백 생성`;
+        }
+      }
     }
   </script>
 
@@ -412,6 +517,7 @@
         window.isTeacherAuthenticated = true;
         closePasswordModal();
         switchView('teacher');
+        document.getElementById('apiKeyBtn').classList.remove('hidden');
         showNotification('교사 대시보드 인증 성공!');
       } else {
         showNotification('비밀번호가 올바르지 않습니다.');
@@ -659,7 +765,13 @@
             </div>
 
             <div class="pt-3 border-t border-slate-100">
-              <label class="block text-xs font-bold text-slate-700 mb-1">교사 피드백 입력</label>
+              <div class="flex justify-between items-center mb-1.5">
+                <label class="block text-xs font-bold text-slate-700">교사 피드백 입력</label>
+                <!-- AI Feedback Button -->
+                <button id="aiBtn-${g}" onclick="generateAIFeedback('${g}')" class="text-[11px] px-2.5 py-1 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-1">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> AI 피드백 생성
+                </button>
+              </div>
               
               <div class="flex gap-1 mb-2">
                 <button onclick="applyPresetFeedback('${g}', '심화')" class="text-[10px] px-2 py-1 bg-indigo-50 text-indigo-700 rounded border border-indigo-200 hover:bg-indigo-100">심화</button>
@@ -667,7 +779,7 @@
                 <button onclick="applyPresetFeedback('${g}', '기초')" class="text-[10px] px-2 py-1 bg-amber-50 text-amber-700 rounded border border-amber-200 hover:bg-amber-100">기초</button>
               </div>
 
-              <textarea id="feedback-${g}" rows="2" placeholder="피드백을 작성하세요..." class="w-full text-xs p-2 rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500 mb-2">${data.feedback || ''}</textarea>
+              <textarea id="feedback-${g}" rows="3" placeholder="피드백을 직접 입력하거나 AI 버튼을 눌러 생성하세요..." class="w-full text-xs p-2 rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500 mb-2">${data.feedback || ''}</textarea>
               <button onclick="saveFeedbackToFirebase('${g}')" class="w-full py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg transition-all">
                 Firebase로 피드백 전송
               </button>
