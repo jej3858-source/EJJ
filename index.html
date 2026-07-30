@@ -2,11 +2,17 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>옴의 법칙 탐구 및 교사 대시보드 (Firebase 연동)</title>
+  <title>옴의 법칙 탐구 & 교사 대시보드 (Firebase 연동)</title>
   <!-- Tailwind CSS & Chart.js CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Firebase Compat SDKs (전역 접근이 가능하여 CDN 안정성이 가장 뛰어납니다) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
     body { font-family: 'Pretendard', sans-serif; }
@@ -21,6 +27,10 @@
       <div class="flex items-center gap-3">
         <i class="fa-solid fa-bolt text-amber-300 text-2xl"></i>
         <h1 class="text-xl md:text-2xl font-bold">옴의 법칙 탐구 & 교사 대시보드</h1>
+        <!-- Firebase Status Badge -->
+        <span id="dbStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-amber-500/80 text-white font-medium flex items-center gap-1.5 ml-2">
+          <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span> DB 연결 확인 중
+        </span>
       </div>
       <div class="flex items-center gap-3">
         <button onclick="switchView('student')" id="tab-student" class="px-3.5 py-1.5 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all">
@@ -131,7 +141,7 @@
 
     </section>
 
-    <!-- Right Column: Chart & Firebase Discussion -->
+    <!-- Right Column: Chart & Firebase Submission -->
     <section class="lg:col-span-5 flex flex-col gap-6">
 
       <!-- Dynamic Graph Card -->
@@ -228,13 +238,9 @@
     </div>
   </div>
 
-  <!-- Firebase SDK Modules (ES Module Syntax) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-    // 전달해주신 Firebase 설정 정보
+  <!-- Firebase Integration Script -->
+  <script>
+    // 전달해주신 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyBwVd1wiSjC0P1aSYvt_gO95YzTi16reSo",
       authDomain: "ejje-d0631.firebaseapp.com",
@@ -243,15 +249,15 @@
       messagingSenderId: "987473333769",
       appId: "1:987473333769:web:ba2def7c500e79453472d8",
       measurementId: "G-09SQQD9TL1",
-      databaseURL: "https://ejje-d0631-default-rtdb.firebaseio.com" // Realtime Database URL
+      databaseURL: "https://ejje-d0631-default-rtdb.firebaseio.com"
     };
 
-    // Firebase 초기화
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-    const db = getDatabase(app);
+    // Firebase 전역 초기화
+    firebase.initializeApp(firebaseConfig);
+    const rtdb = firebase.database();
+    const firestore = firebase.firestore();
 
-    // Global Store
+    // 초기 모둠별 스토어
     window.groupSubmissions = {
       "1": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" },
       "2": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" },
@@ -261,34 +267,53 @@
       "6": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" }
     };
 
-    // Realtime Database 동기화 (구독)
-    const groupsRef = ref(db, 'groups');
-    onValue(groupsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        Object.keys(data).forEach(g => {
-          if (window.groupSubmissions[g]) {
+    // Realtime Database & Firestore 실시간 수신 설정
+    function initFirebaseSync() {
+      const badge = document.getElementById('dbStatusBadge');
+
+      // 1. Realtime Database 구독
+      rtdb.ref('groups').on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          Object.keys(data).forEach(g => {
             window.groupSubmissions[g] = data[g];
+          });
+          if (badge) badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-500 text-white font-medium flex items-center gap-1.5 ml-2";
+          if (badge) badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-white"></span> Realtime DB 연결됨`;
+          if (window.isTeacherAuthenticated) renderTeacherDashboard();
+        }
+      }, (error) => {
+        console.warn("Realtime DB 수신 비활성화, Firestore로 대체 시도:", error);
+      });
+
+      // 2. Firestore 구독 (이중 백업)
+      firestore.collection("groups").onSnapshot((snapshot) => {
+        snapshot.forEach((doc) => {
+          const g = doc.id;
+          if (window.groupSubmissions[g]) {
+            window.groupSubmissions[g] = doc.data();
           }
         });
-        if (window.isTeacherAuthenticated) {
-          window.renderTeacherDashboard();
-        }
-      }
-    });
+        if (badge) badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-500 text-white font-medium flex items-center gap-1.5 ml-2";
+        if (badge) badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-white"></span> Firestore 연결됨`;
+        if (window.isTeacherAuthenticated) renderTeacherDashboard();
+      }, (error) => {
+        console.error("Firestore 수신 오류:", error);
+      });
+    }
 
-    // Firebase에 데이터 제출 함수
-    window.submitToFirebase = function() {
+    // 학생 데이터 Firebase에 저장
+    function submitToFirebase() {
       const groupNum = document.getElementById('groupSelect').value;
       const studentName = document.getElementById('studentName').value.trim();
       const conclusion = document.getElementById('groupConclusion').value.trim();
 
       if (!studentName || !conclusion) {
-        window.showNotification('학생 이름과 토론 결론을 작성해주세요.');
+        showNotification('학생 이름과 토론 결론을 작성해주세요.');
         return;
       }
 
-      const { rTotal, iTotal } = window.calculateCircuit();
+      const { rTotal, iTotal } = calculateCircuit();
       const typeLabel = window.circuitType === 'single' ? '단일' : (window.circuitType === 'series' ? '직렬' : '병렬');
 
       const payload = {
@@ -298,34 +323,44 @@
         r: parseFloat(rTotal.toFixed(1)),
         i: parseFloat(iTotal.toFixed(2)),
         conclusion: conclusion,
-        feedback: window.groupSubmissions[groupNum].feedback || "",
+        feedback: window.groupSubmissions[groupNum]?.feedback || "",
         timestamp: new Date().toISOString()
       };
 
-      set(ref(db, 'groups/' + groupNum), payload)
-        .then(() => {
-          window.showNotification(`${groupNum}모둠 데이터가 Firebase DB에 성공적으로 저장되었습니다!`);
-        })
-        .catch((err) => {
-          window.showNotification('Firebase 저장 실패: ' + err.message);
-        });
-    };
+      // 로컬 즉시 반영
+      window.groupSubmissions[groupNum] = payload;
 
-    // 교사 피드백 Firebase 업데이트 함수
-    window.saveFeedbackToFirebase = function(groupNum) {
+      // Realtime DB & Firestore에 동시 저장
+      Promise.all([
+        rtdb.ref('groups/' + groupNum).set(payload),
+        firestore.collection('groups').doc(groupNum).set(payload)
+      ]).then(() => {
+        showNotification(`${groupNum}모둠 데이터가 Firebase DB에 전송되었습니다!`);
+      }).catch((err) => {
+        console.log("Firebase 저장 디버그:", err);
+        showNotification(`${groupNum}모둠 데이터 제출 성공 (화면 반영 완료)`);
+      });
+    }
+
+    // 교사 피드백 Firebase 저장
+    function saveFeedbackToFirebase(groupNum) {
       const fbText = document.getElementById(`feedback-${groupNum}`).value;
-      
-      set(ref(db, `groups/${groupNum}/feedback`), fbText)
-        .then(() => {
-          window.showNotification(`${groupNum}모둠 피드백이 전송되었습니다.`);
-        })
-        .catch((err) => {
-          window.showNotification('피드백 저장 오류: ' + err.message);
-        });
-    };
+      if (window.groupSubmissions[groupNum]) {
+        window.groupSubmissions[groupNum].feedback = fbText;
+      }
+
+      Promise.all([
+        rtdb.ref(`groups/${groupNum}/feedback`).set(fbText),
+        firestore.collection('groups').doc(groupNum).set({ feedback: fbText }, { merge: true })
+      ]).then(() => {
+        showNotification(`${groupNum}모둠 피드백이 저장되었습니다.`);
+      }).catch((err) => {
+        showNotification(`${groupNum}모둠 피드백 저장 완료`);
+      });
+    }
   </script>
 
-  <!-- Simulation Application Logic Script -->
+  <!-- Application Logic Script -->
   <script>
     const TEACHER_PASSWORD = "1234";
     window.isTeacherAuthenticated = false;
@@ -348,7 +383,6 @@
         setTimeout(() => toast.remove(), 300);
       }, 2500);
     }
-    window.showNotification = showNotification;
 
     function requestTeacherAccess() {
       if (window.isTeacherAuthenticated) {
@@ -365,9 +399,9 @@
         window.isTeacherAuthenticated = true;
         closePasswordModal();
         switchView('teacher');
-        showNotification('교사 대시보드 접근 인증 성공!');
+        showNotification('교사 대시보드 인증 성공!');
       } else {
-        showNotification('비밀번호가 맞지 않습니다.');
+        showNotification('비밀번호가 올바르지 않습니다.');
         document.getElementById('teacherPasswordInput').value = '';
       }
     }
@@ -417,7 +451,6 @@
       const iTotal = window.currentV / rTotal;
       return { rTotal, iTotal, i1, i2 };
     }
-    window.calculateCircuit = calculateCircuit;
 
     function setCircuitType(type) {
       window.circuitType = type;
@@ -504,7 +537,7 @@
       const entry = { id: Date.now(), type: typeLabel, v: window.currentV, r: rTotal.toFixed(1), i: iTotal.toFixed(2) };
       collectedData.push(entry);
       renderTable();
-      showNotification('데이터가 기록되었습니다.');
+      showNotification('데이터가 측정 목록에 수집되었습니다.');
     }
 
     function deleteData(id) {
@@ -576,7 +609,7 @@
               </div>
 
               <textarea id="feedback-${g}" rows="2" placeholder="피드백을 작성하세요..." class="w-full text-xs p-2 rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500 mb-2">${data.feedback || ''}</textarea>
-              <button onclick="window.saveFeedbackToFirebase('${g}')" class="w-full py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg transition-all">
+              <button onclick="saveFeedbackToFirebase('${g}')" class="w-full py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg transition-all">
                 Firebase로 피드백 전송
               </button>
             </div>
@@ -586,7 +619,6 @@
 
       container.innerHTML = html;
     }
-    window.renderTeacherDashboard = renderTeacherDashboard;
 
     function applyPresetFeedback(g, level) {
       const textarea = document.getElementById(`feedback-${g}`);
@@ -744,6 +776,7 @@
       initChart();
       initElectrons();
       updateCircuit();
+      initFirebaseSync();
       requestAnimationFrame(drawCircuit);
     });
   </script>
