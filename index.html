@@ -12,6 +12,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics-compat.js"></script>
 
   <style>
     @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
@@ -88,7 +89,7 @@
         <div class="space-y-4">
           <div>
             <div class="flex justify-between items-center mb-1">
-              <label class="text-sm font-medium text-slate-700">전압 ($V$)</label>
+              <label class="text-sm font-medium text-slate-700">전압 (V)</label>
               <span id="vVal" class="text-indigo-600 font-bold text-lg">6.0 V</span>
             </div>
             <input type="range" id="vRange" min="1" max="12" step="0.5" value="6" oninput="updateCircuit()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
@@ -96,7 +97,7 @@
 
           <div>
             <div class="flex justify-between items-center mb-1">
-              <label id="r1Label" class="text-sm font-medium text-slate-700">저항 ($R$)</label>
+              <label id="r1Label" class="text-sm font-medium text-slate-700">저항 (R)</label>
               <span id="r1Val" class="text-amber-600 font-bold text-lg">10 Ω</span>
             </div>
             <input type="range" id="r1Range" min="2" max="30" step="1" value="10" oninput="updateCircuit()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-600">
@@ -104,7 +105,7 @@
 
           <div id="r2Container" class="hidden">
             <div class="flex justify-between items-center mb-1">
-              <label class="text-sm font-medium text-slate-700">저항 2 ($R_2$)</label>
+              <label class="text-sm font-medium text-slate-700">저항 2 (R2)</label>
               <span id="r2Val" class="text-emerald-600 font-bold text-lg">10 Ω</span>
             </div>
             <input type="range" id="r2Range" min="2" max="30" step="1" value="10" oninput="updateCircuit()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
@@ -114,15 +115,15 @@
         <!-- Calculated Values Cards -->
         <div class="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-slate-100 text-center">
           <div class="bg-indigo-50 p-2.5 rounded-lg border border-indigo-100">
-            <div class="text-xs text-indigo-600 font-medium mb-0.5">전압 ($V$)</div>
+            <div class="text-xs text-indigo-600 font-medium mb-0.5">전압 (V)</div>
             <div id="calcV" class="text-base font-extrabold text-indigo-700">6.0 V</div>
           </div>
           <div class="bg-amber-50 p-2.5 rounded-lg border border-amber-100">
-            <div class="text-xs text-amber-600 font-medium mb-0.5">합성 저항 ($R_{total}$)</div>
+            <div class="text-xs text-amber-600 font-medium mb-0.5">합성 저항 (R_total)</div>
             <div id="calcR" class="text-base font-extrabold text-amber-700">10.0 Ω</div>
           </div>
           <div class="bg-rose-50 p-2.5 rounded-lg border border-rose-100">
-            <div class="text-xs text-rose-600 font-medium mb-0.5">전체 전류 ($I$)</div>
+            <div class="text-xs text-rose-600 font-medium mb-0.5">전체 전류 (I)</div>
             <div id="calcI" class="text-base font-extrabold text-rose-700">0.60 A</div>
           </div>
         </div>
@@ -152,7 +153,7 @@
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
         <div class="flex justify-between items-center mb-2">
           <h2 class="text-md font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-chart-line text-indigo-600"></i> 실시간 $V-I$ 측정 데이터 그래프
+            <i class="fa-solid fa-chart-line text-indigo-600"></i> 실시간 V-I 측정 데이터 그래프
           </h2>
           <span id="pointCountTag" class="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">측정점: 0개</span>
         </div>
@@ -270,7 +271,7 @@
     </div>
   </div>
 
-  <!-- Firebase Integration Script -->
+  <!-- Firebase 연동 스크립트 및 AI 피드백 부분 -->
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyBwVd1wiSjC0P1aSYvt_gO95YzTi16reSo",
@@ -287,7 +288,6 @@
     const rtdb = firebase.database();
     const firestore = firebase.firestore();
 
-    // 제공해주신 Gemini API Key 적용
     window.GEMINI_API_KEY = "AQ.Ab8RN6JBfploKDf4wOKRP3COVyKrk-Iz8o_2iX0_QLW9zGCQ_w";
 
     window.groupSubmissions = {
@@ -412,7 +412,7 @@
       showNotification("API Key가 새로 설정되었습니다!");
     }
 
-    // Gemini API 연결 AI 자동 피드백 생성 함수
+    // ✅ 수정된 부분: 프록시 서버 우회 코드가 적용된 API 호출
     async function generateAIFeedback(groupNum) {
       const data = window.groupSubmissions[groupNum];
       if (!data || !data.name || data.name === "") {
@@ -448,8 +448,11 @@
 `;
 
       try {
-        // gemini-2.5-flash 모델 API 호출 (X-goog-api-key 헤더 적용)
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`, {
+        const targetUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+        // CORS 프록시 서버 URL 적용
+        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
+
+        const response = await fetch(proxyUrl, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
@@ -461,6 +464,13 @@
         });
 
         const resData = await response.json();
+        
+        if (resData.error) {
+           console.error("API Error:", resData.error);
+           showNotification("API 요청 실패: " + resData.error.message);
+           return;
+        }
+
         if (resData.candidates && resData.candidates[0].content.parts[0].text) {
           const aiText = "[AI 피드백] " + resData.candidates[0].content.parts[0].text.trim();
           document.getElementById(`feedback-${groupNum}`).value = aiText;
@@ -471,7 +481,7 @@
         }
       } catch (error) {
         console.error("AI Fetch Error:", error);
-        showNotification("AI 호출 중 오류가 발생했습니다.");
+        showNotification("AI 호출 중 오류가 발생했습니다. (네트워크 상태 확인)");
       } finally {
         if (feedbackBtn) {
           feedbackBtn.disabled = false;
@@ -481,7 +491,7 @@
     }
   </script>
 
-  <!-- Application Logic & Chart Rendering Script -->
+  <!-- 앱 및 차트 로직 스크립트 -->
   <script>
     const TEACHER_PASSWORD = "1234";
     window.isTeacherAuthenticated = false;
@@ -589,7 +599,7 @@
         r1Label.innerText = '저항 (R)';
       } else {
         r2Container.classList.remove('hidden');
-        r1Label.innerText = '저항 1 (R₁)';
+        r1Label.innerText = '저항 1 (R1)';
       }
       initElectrons();
       updateCircuit();
@@ -612,7 +622,7 @@
 
       const branchInfo = document.getElementById('branchCurrentInfo');
       if (window.circuitType === 'parallel') {
-        branchInfo.innerText = `가지전류: I₁ = ${i1.toFixed(2)}A, I₂ = ${i2.toFixed(2)}A`;
+        branchInfo.innerText = `가지전류: I1 = ${i1.toFixed(2)}A, I2 = ${i2.toFixed(2)}A`;
       } else {
         branchInfo.innerText = '';
       }
@@ -885,11 +895,11 @@
       if (window.circuitType === 'single') {
         drawResistor(ctx, 250, 50, `R = ${window.currentR1}Ω`);
       } else if (window.circuitType === 'series') {
-        drawResistor(ctx, 200, 50, `R₁ = ${window.currentR1}Ω`);
-        drawResistor(ctx, 320, 50, `R₂ = ${window.currentR2}Ω`);
+        drawResistor(ctx, 200, 50, `R1 = ${window.currentR1}Ω`);
+        drawResistor(ctx, 320, 50, `R2 = ${window.currentR2}Ω`);
       } else if (window.circuitType === 'parallel') {
-        drawResistor(ctx, 275, 60, `R₁ = ${window.currentR1}Ω`);
-        drawResistor(ctx, 275, 170, `R₂ = ${window.currentR2}Ω`);
+        drawResistor(ctx, 275, 60, `R1 = ${window.currentR1}Ω`);
+        drawResistor(ctx, 275, 170, `R2 = ${window.currentR2}Ω`);
       }
 
       ctx.fillStyle = '#38bdf8';
