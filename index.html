@@ -433,12 +433,13 @@
 `;
 
       try {
-        // gemini-2.5-flash 모델 엔드포인트 호출 (헤더의 중복 API Key 전달 구문 제거)
+        // gemini-2.5-flash 모델 엔드포인트 호출
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
         const response = await fetch(url, {
           method: "POST",
           headers: { 
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "X-goog-api-key": apiKey
           },
           body: JSON.stringify({
             contents: [{ parts: [{ text: promptText }] }]
@@ -790,9 +791,8 @@
     }
 
     function downloadCSV() {
-      let csvContent = "﻿";
-      csvContent += "모둠,학생명,회로연결,전압(V),합성저항(ohm),전류(A),측정점수,모둠결론,교사피드백,제출시간
-";
+      let csvContent = "\uFEFF";
+      csvContent += "모둠,학생명,회로연결,전압(V),합성저항(ohm),전류(A),측정점수,모둠결론,교사피드백,제출시간\n";
 
       for (let g = 1; g <= 6; g++) {
         const d = window.groupSubmissions[g] || {};
@@ -809,8 +809,7 @@
           `"${(d.feedback || '').replace(/"/g, '""')}"`,
           `"${d.submittedAt || '-'}"`
         ];
-        csvContent += row.join(",") + "
-";
+        csvContent += row.join(",") + "\n";
       }
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
