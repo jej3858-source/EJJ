@@ -1,1098 +1,751 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>옴의 법칙 탐구 웹앱 (학생용)</title>
-
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts Inter & Noto Sans KR -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Noto Sans KR', 'Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#f0fdfa',
-                            100: '#ccfbf1',
-                            500: '#14b8a6',
-                            600: '#0d9488',
-                            700: '#0f766e',
-                            900: '#134e4a',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-        .tab-active {
-            border-bottom: 3px solid #0d9488;
-            color: #0d9488;
-            font-weight: 700;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>옴의 법칙 탐구 및 교사 대시보드 (Firebase 연동)</title>
+  <!-- Tailwind CSS & Chart.js CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    body { font-family: 'Pretendard', sans-serif; }
+    canvas { touch-action: none; }
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
-    <!-- TOP NAVIGATION HEADER -->
-    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <div class="bg-brand-500 text-white p-2 rounded-lg flex items-center justify-center shadow-lg">
-                    <i class="fa-solid fa-bolt text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-lg font-bold tracking-tight text-slate-100 flex items-center gap-2">
-                        옴의 법칙(Ohm's Law) 탐구 웹앱
-                        <span class="text-xs bg-brand-700 text-brand-100 px-2 py-0.5 rounded-full font-medium">학생용</span>
-                    </h1>
-                    <p class="text-xs text-slate-400">중2 과학 VII-2. 전류, 전압, 저항 사이의 관계</p>
-                </div>
-            </div>
+  <!-- Header -->
+  <header class="bg-indigo-600 text-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-3">
+      <div class="flex items-center gap-3">
+        <i class="fa-solid fa-bolt text-amber-300 text-2xl"></i>
+        <h1 class="text-xl md:text-2xl font-bold">옴의 법칙 탐구 & 교사 대시보드</h1>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="switchView('student')" id="tab-student" class="px-3.5 py-1.5 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all">
+          <i class="fa-solid fa-user-graduate me-1"></i> 학생용 탐구
+        </button>
+        <button onclick="requestTeacherAccess()" id="tab-teacher" class="px-3.5 py-1.5 rounded-lg text-sm font-bold bg-indigo-700 hover:bg-indigo-800 text-white transition-all border border-indigo-500">
+          <i class="fa-solid fa-lock me-1"></i> 교사 대시보드
+        </button>
+      </div>
+    </div>
+  </header>
 
-            <!-- TEAM SELECTOR -->
-            <div class="flex items-center space-x-3">
-                <div id="studentGroupSelectWrapper" class="flex items-center bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-xs">
-                    <i class="fa-solid fa-users text-teal-400 mr-2"></i>
-                    <span class="text-slate-300 mr-2 font-medium">내 모둠:</span>
-                    <select id="myGroupSelect" onchange="changeCurrentGroup(this.value)" class="bg-slate-900 text-white font-bold rounded px-2 py-1 outline-none border border-slate-700 cursor-pointer">
-                        <option value="1">1모둠</option>
-                        <option value="2">2모둠</option>
-                        <option value="3">3모둠</option>
-                        <option value="4">4모둠</option>
-                        <option value="5">5모둠</option>
-                        <option value="6">6모둠</option>
-                    </select>
-                </div>
-            </div>
-        </div>
-    </header>
+  <!-- ==================== 1. 학생용 탐구 화면 ==================== -->
+  <main id="studentView" class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full flex-1">
 
-    <!-- MAIN CONTAINER -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
-        <!-- LESSON INTRO CARD -->
-        <div class="bg-white rounded-xl p-4 mb-6 border border-slate-200 shadow-sm relative overflow-hidden">
-            <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-teal-500"></div>
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div class="space-y-1">
-                    <div class="flex items-center gap-2">
-                        <span class="bg-teal-100 text-teal-800 text-xs font-bold px-2.5 py-0.5 rounded">수업 목표</span>
-                        <h2 class="text-sm font-bold text-slate-800">전기 회로(단일, 직렬, 병렬 연결) 시뮬레이션을 통해 전류, 전압, 합성 저항 사이의 정량적 관계를 설명할 수 있다.</h2>
-                    </div>
-                    <p class="text-xs text-slate-600 pl-1">
-                        <i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i>
-                        <strong>탐구 질문:</strong> 저항을 직렬 또는 병렬로 연결하면 전체 저항과 전류의 크기는 각각 어떻게 달라질까?
-                    </p>
-                </div>
-                <div class="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100 text-xs shrink-0">
-                    <div class="text-center px-3 border-r border-slate-200">
-                        <span class="block text-slate-400 font-medium">도입 (5분)</span>
-                        <span class="font-semibold text-slate-700">환경 점검</span>
-                    </div>
-                    <div class="text-center px-3 border-r border-slate-200 text-teal-600 font-bold">
-                        <span class="block text-teal-500 font-medium">탐구 (15분)</span>
-                        <span>실험 데이터</span>
-                    </div>
-                    <div class="text-center px-3 border-r border-slate-200">
-                        <span class="block text-slate-400 font-medium">토론 (20분)</span>
-                        <span class="font-semibold text-slate-700">원리 수립</span>
-                    </div>
-                    <div class="text-center px-3">
-                        <span class="block text-slate-400 font-medium">정리 (5분)</span>
-                        <span class="font-semibold text-slate-700">결과 공유</span>
-                    </div>
-                </div>
-            </div>
+    <!-- Left Column: Controls & Circuit Canvas -->
+    <section class="lg:col-span-7 flex flex-col gap-6">
+      
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-indigo-600"></i> 회로 조건 및 변수 조작
+          </h2>
+          <div class="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-lg text-sm">
+            <span class="font-medium text-slate-600">내 모둠:</span>
+            <select id="groupSelect" class="bg-white font-bold text-indigo-600 rounded px-2 py-0.5 border border-slate-200">
+              <option value="1">1 모둠</option>
+              <option value="2">2 모둠</option>
+              <option value="3">3 모둠</option>
+              <option value="4">4 모둠</option>
+              <option value="5">5 모둠</option>
+              <option value="6">6 모둠</option>
+            </select>
+          </div>
         </div>
 
-        <!-- STUDENT VIEW SECTION -->
-        <div id="studentView" class="space-y-6">
-            
-            <!-- STUDENT TABS -->
-            <div class="flex border-b border-slate-200 bg-white rounded-t-xl px-4 pt-2">
-                <button onclick="switchStudentTab('simTab')" id="tabBtn-simTab" class="tab-active px-5 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-all">
-                    <i class="fa-solid fa-flask"></i> 1. 회로 시뮬레이터 & 데이터 수집
-                </button>
-                <button onclick="switchStudentTab('discussionTab')" id="tabBtn-discussionTab" class="text-slate-500 px-5 py-3 text-sm font-medium flex items-center gap-2 border-b-2 border-transparent hover:text-slate-700 transition-all">
-                    <i class="fa-solid fa-comments"></i> 2. 데이터 기반 토론 & 제출
-                </button>
-                <button onclick="switchStudentTab('aiTab')" id="tabBtn-aiTab" class="text-slate-500 px-5 py-3 text-sm font-medium flex items-center gap-2 border-b-2 border-transparent hover:text-slate-700 transition-all">
-                    <i class="fa-solid fa-robot text-teal-600"></i> 3. Gemini AI 학습 도우미
-                </button>
-            </div>
-
-            <!-- TAB 1: CIRCUIT SIMULATOR -->
-            <div id="simTab" class="tab-content block">
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                    
-                    <!-- LEFT 7 COLS: CIRCUIT CANVAS & CONTROLS -->
-                    <div class="lg:col-span-7 bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col">
-                        <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-                            <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
-                                <i class="fa-solid fa-microchip text-teal-600"></i> 전기 회로 시뮬레이터
-                            </h3>
-                            
-                            <!-- CIRCUIT TYPE SELECTOR SWITCH -->
-                            <div class="flex bg-slate-100 p-1 rounded-lg gap-1 border border-slate-200">
-                                <button onclick="setCircuitType('single')" id="typeBtnSingle" class="text-xs font-bold px-2.5 py-1 rounded bg-teal-600 text-white transition-all shadow-sm">
-                                    단일 저항
-                                </button>
-                                <button onclick="setCircuitType('series')" id="typeBtnSeries" class="text-xs font-bold px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 transition-all">
-                                    직렬 연결 🔗
-                                </button>
-                                <button onclick="setCircuitType('parallel')" id="typeBtnParallel" class="text-xs font-bold px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 transition-all">
-                                    병렬 연결 🌿
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- CANVAS DISPLAY -->
-                        <div class="relative bg-slate-900 rounded-lg p-3 overflow-hidden shadow-inner flex-1 min-h-[320px] flex items-center justify-center">
-                            <canvas id="circuitCanvas" width="550" height="300" class="w-full h-auto max-h-[320px]"></canvas>
-
-                            <!-- Overlay Realtime Gauge Readings -->
-                            <div class="absolute top-3 left-3 bg-slate-800/90 backdrop-blur border border-slate-700 text-white rounded-lg p-2.5 text-xs space-y-1 shadow">
-                                <div class="flex justify-between items-center gap-4">
-                                    <span class="text-slate-400"><i class="fa-solid fa-car-battery text-amber-400 mr-1"></i>전원 전압 ($V$):</span>
-                                    <span id="gaugeVoltage" class="font-mono font-bold text-amber-300 text-sm">6.0 V</span>
-                                </div>
-                                <div class="flex justify-between items-center gap-4">
-                                    <span class="text-slate-400"><i class="fa-solid fa-gauge-simple-high text-cyan-400 mr-1"></i>전체 전류 ($I_{total}$):</span>
-                                    <span id="gaugeCurrent" class="font-mono font-bold text-cyan-300 text-sm">0.30 A</span>
-                                </div>
-                                <div class="flex justify-between items-center gap-4">
-                                    <span class="text-slate-400"><i class="fa-solid fa-omega text-emerald-400 mr-1"></i>합성 저항 ($R_{total}$):</span>
-                                    <span id="gaugeResistance" class="font-mono font-bold text-emerald-300 text-sm">20 Ω</span>
-                                </div>
-                                <div id="subGaugeBranchInfo" class="text-[11px] text-slate-300 pt-1 border-t border-slate-700 font-mono hidden space-y-0.5">
-                                    <div id="gaugeDetailsR1R2">R1: 20Ω | R2: 20Ω</div>
-                                    <div id="gaugeDetailsI1I2" class="text-cyan-300">I1: 0.30A | I2: 0.30A</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- CONTROL SLIDERS -->
-                        <div class="mt-5 space-y-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
-                            <!-- Voltage Control -->
-                            <div>
-                                <div class="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
-                                    <label for="voltageRange" class="flex items-center gap-1.5">
-                                        <i class="fa-solid fa-bolt text-amber-500"></i> 전압 ($V$) 조절 (전원 장치)
-                                    </label>
-                                    <span id="voltageValDisplay" class="text-amber-600 font-mono text-sm">6.0 V</span>
-                                </div>
-                                <input type="range" id="voltageRange" min="0" max="15" step="0.5" value="6.0" oninput="updateCircuit()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-500">
-                                <div class="flex justify-between text-[10px] text-slate-400 font-mono mt-1">
-                                    <span>0V</span>
-                                    <span>5V</span>
-                                    <span>10V</span>
-                                    <span>15V</span>
-                                </div>
-                            </div>
-
-                            <!-- Resistor 1 Control -->
-                            <div>
-                                <div class="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
-                                    <label for="resistanceRange" class="flex items-center gap-1.5">
-                                        <i class="fa-solid fa-omega text-emerald-600"></i> 저항 1 ($R_1$)
-                                    </label>
-                                    <span id="resistanceValDisplay" class="text-emerald-600 font-mono text-sm">20 Ω</span>
-                                </div>
-                                <input type="range" id="resistanceRange" min="5" max="100" step="5" value="20" oninput="updateCircuit()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
-                            </div>
-
-                            <!-- Resistor 2 Control -->
-                            <div id="resistor2Wrapper" class="hidden">
-                                <div class="flex justify-between text-xs font-bold text-slate-700 mb-1.5">
-                                    <label for="resistance2Range" class="flex items-center gap-1.5">
-                                        <i class="fa-solid fa-omega text-indigo-600"></i> 저항 2 ($R_2$)
-                                    </label>
-                                    <span id="resistance2ValDisplay" class="text-indigo-600 font-mono text-sm">20 Ω</span>
-                                </div>
-                                <input type="range" id="resistance2Range" min="5" max="100" step="5" value="20" oninput="updateCircuit()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
-                            </div>
-
-                            <!-- Action Buttons & Formula Summary -->
-                            <div class="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-200">
-                                <span class="text-xs text-slate-600 leading-snug">
-                                    <span id="calcFormulaLabel" class="font-bold text-slate-700">공식:</span> 
-                                    <strong id="calcFormulaText" class="text-teal-700 font-mono">I = 6.0V / 20Ω = 0.30A</strong>
-                                </span>
-                                <button onclick="recordDataPoint()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow transition-all flex items-center justify-center gap-1.5 shrink-0">
-                                    <i class="fa-solid fa-plus"></i> 측정 데이터 기록하기
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- RIGHT 5 COLS: GRAPHS & RECORDED TABLE -->
-                    <div class="lg:col-span-5 space-y-6">
-                        
-                        <!-- REAL-TIME GRAPH CARD -->
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-                            <div class="flex items-center justify-between mb-3">
-                                <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
-                                    <i class="fa-solid fa-chart-line text-teal-600"></i> 실시간 그래프 관찰
-                                </h4>
-                                <div class="flex space-x-1">
-                                    <button onclick="setGraphType('VI')" id="btnGraphVI" class="text-[11px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded">V - I (전압-전류)</button>
-                                    <button onclick="setGraphType('RI')" id="btnGraphRI" class="text-[11px] bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium px-2 py-0.5 rounded">R - I (저항-전류)</button>
-                                </div>
-                            </div>
-                            <div class="h-48 w-full">
-                                <canvas id="simChart"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- RECORDED DATA TABLE -->
-                        <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col h-60">
-                            <div class="flex items-center justify-between mb-2">
-                                <h4 class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
-                                    <i class="fa-solid fa-table text-indigo-600"></i> 내 수집 데이터 목록
-                                </h4>
-                                <button onclick="clearRecordedData()" class="text-[11px] text-rose-500 hover:underline">
-                                    <i class="fa-solid fa-trash-can"></i> 전체 삭제
-                                </button>
-                            </div>
-                            
-                            <div class="flex-1 overflow-y-auto border border-slate-100 rounded-lg">
-                                <table class="w-full text-left text-xs">
-                                    <thead class="bg-slate-100 text-slate-600 font-bold sticky top-0">
-                                        <tr>
-                                            <th class="p-2 text-center">회차</th>
-                                            <th class="p-2">연결 방식</th>
-                                            <th class="p-2">전압</th>
-                                            <th class="p-2">합성저항</th>
-                                            <th class="p-2">전체전류</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="dataTableBody" class="divide-y divide-slate-100 font-mono">
-                                        <tr>
-                                            <td colspan="5" class="text-center text-slate-400 py-8 font-sans">
-                                                아직 기록된 데이터가 없습니다.<br>시뮬레이터를 조작하고 '데이터 기록하기'를 누르세요.
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
-                    </div>
-                </div>
-            </div>
-
-            <!-- TAB 2: DISCUSSION & SUBMISSION -->
-            <div id="discussionTab" class="tab-content hidden">
-                <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-                    
-                    <div class="md:col-span-8 bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-5">
-                        <div class="border-b border-slate-100 pb-4">
-                            <span class="text-xs text-teal-600 font-bold tracking-wider uppercase">모둠 활동 & 토론</span>
-                            <h3 class="text-lg font-bold text-slate-800 mt-1">데이터 기반 옴의 법칙 원리 토론 및 결론 작성</h3>
-                            <p class="text-xs text-slate-500 mt-1">
-                                시뮬레이터에서 탐구한 정량적 데이터를 근거로, 저항·전압·전류의 인과관계를 모둠원들과 토론한 후 작성해 주세요.
-                            </p>
-                        </div>
-
-                        <form id="submissionForm" onsubmit="handleStudentSubmit(event)" class="space-y-4">
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">
-                                    1. [전압과 전류의 관계] 저항이 일정할 때, 전압을 2배, 3배로 증가시키면 전류의 크기는 어떻게 변하나요?
-                                </label>
-                                <textarea id="ans1" rows="3" required placeholder="예: 저항을 20Ω으로 고정했을 때 전압을 3V에서 6V로 2배 올리니 전류도 0.15A에서 0.30A로 2배 증가했습니다." class="w-full text-xs p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"></textarea>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">
-                                    2. [저항의 연결과 전류] 저항을 직렬로 연결할 때와 병렬로 연결할 때 합성 저항과 전체 전류는 어떻게 달라지나요?
-                                </label>
-                                <textarea id="ans2" rows="3" required placeholder="예: 직렬 연결은 합성 저항이 커져 전류가 줄어들고, 병렬 연결은 합성 저항이 작아져 전체 전류가 증가합니다." class="w-full text-xs p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"></textarea>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-bold text-slate-700 mb-1">
-                                    3. [옴의 법칙 수식 도출] 위 결과를 바탕으로 전류(I), 전압(V), 저항(R) 사이의 옴의 법칙을 관계식으로 요약해 보세요.
-                                </label>
-                                <input type="text" id="ans3" required placeholder="예: 전류(I) = 전압(V) / 합성저항(R)  또는  V = I * R" class="w-full text-xs p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                            </div>
-
-                            <div class="pt-3 flex justify-end">
-                                <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm px-6 py-2.5 rounded-lg shadow-md transition-all flex items-center gap-2">
-                                    <i class="fa-solid fa-paper-plane"></i> 토론 결론 저장하기
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <!-- SUBMISSION STATUS & FEEDBACK CARD -->
-                    <div class="md:col-span-4 bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col">
-                        <div class="flex items-center gap-2 text-slate-800 font-bold border-b border-slate-100 pb-3 mb-3">
-                            <i class="fa-solid fa-circle-check text-teal-600 text-base"></i>
-                            <h4 class="text-sm">제출 상태 및 피드백</h4>
-                        </div>
-
-                        <div id="studentFeedbackBox" class="flex-1 bg-slate-50 border border-slate-200 rounded-lg p-4 flex flex-col justify-between space-y-3">
-                            <div>
-                                <span class="text-[11px] font-bold text-slate-400 block mb-1">내 모둠 작성 상태</span>
-                                <div id="submissionStatusTag" class="mb-3">
-                                    <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded">작성 중</span>
-                                </div>
-                                <span class="text-[11px] font-bold text-slate-400 block mb-1">선생님 피드백 안내</span>
-                                <div id="feedbackContent" class="text-xs text-slate-600 leading-relaxed italic">
-                                    토론 내용을 작성하여 제출하면 선생님의 과정 중심 피드백 및 성취 수준 안내가 도착합니다.
-                                </div>
-                            </div>
-
-                            <div id="achievementBadge" class="hidden pt-2 border-t border-slate-200">
-                                <span class="text-[10px] text-slate-500 block mb-1">도달 성취 수준:</span>
-                                <span id="badgeText" class="inline-block px-2.5 py-1 text-xs font-bold rounded bg-teal-100 text-teal-800">
-                                    심화 (모범 성취)
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            <!-- TAB 3: GEMINI AI ASSISTANT -->
-            <div id="aiTab" class="tab-content hidden">
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 max-w-4xl mx-auto space-y-4">
-                    <div class="flex items-center space-x-3 border-b border-slate-100 pb-4">
-                        <div class="bg-gradient-to-tr from-teal-500 to-indigo-600 text-white p-3 rounded-xl shadow">
-                            <i class="fa-solid fa-robot text-2xl"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-base font-bold text-slate-800">Gemini AI 과학 질문 도우미</h3>
-                            <p class="text-xs text-slate-500">회로 실험, 옴의 법칙, 직렬/병렬 연결 및 그래프 해석에 대해 질문해 보세요.</p>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2 text-xs">
-                        <span class="text-slate-400 font-medium py-1">추천 질문:</span>
-                        <button onclick="askPresetAi('저항을 직렬 연결하면 전체 저항과 전류는 어떻게 변하나요?')" class="bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-700 px-2.5 py-1 rounded-full border border-slate-200 transition-all">
-                            "저항의 직렬 연결 특징"
-                        </button>
-                        <button onclick="askPresetAi('저항을 병렬 연결하면 왜 전체 저항이 더 작아지나요?')" class="bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-700 px-2.5 py-1 rounded-full border border-slate-200 transition-all">
-                            "저항의 병렬 연결 특징"
-                        </button>
-                        <button onclick="askPresetAi('전압-전류 그래프에서 기울기가 의미하는 것은 무엇인가요?')" class="bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-700 px-2.5 py-1 rounded-full border border-slate-200 transition-all">
-                            "V-I 그래프 기울기 의미"
-                        </button>
-                    </div>
-
-                    <div id="chatBox" class="h-80 overflow-y-auto border border-slate-200 rounded-lg p-4 space-y-3 bg-slate-50/50">
-                        <div class="flex gap-2">
-                            <div class="w-7 h-7 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">AI</div>
-                            <div class="bg-white border border-slate-200 rounded-lg p-3 text-xs text-slate-700 max-w-[80%] shadow-sm">
-                                안녕하세요! 옴의 법칙 탐구 도우미 Gemini입니다. 회로 실험 데이터를 해석하거나 궁금한 점을 편하게 물어보세요.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-2">
-                        <input type="text" id="aiQueryInput" onkeypress="if(event.key==='Enter') sendAiQuery()" placeholder="AI에게 과학 질문을 입력하세요..." class="flex-1 text-xs p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none">
-                        <button onclick="sendAiQuery()" class="bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-5 py-3 rounded-lg shadow transition-all flex items-center gap-1.5">
-                            <i class="fa-solid fa-paper-plane"></i> 전송
-                        </button>
-                    </div>
-                </div>
-            </div>
-
+        <!-- Circuit Mode Selector -->
+        <div class="grid grid-cols-3 gap-2 mb-5">
+          <button onclick="setCircuitType('single')" id="btn-single" class="circuit-btn py-2.5 px-3 text-sm font-semibold rounded-lg border text-center transition-all bg-indigo-600 text-white border-indigo-600 shadow-sm">
+            단일 저항
+          </button>
+          <button onclick="setCircuitType('series')" id="btn-series" class="circuit-btn py-2.5 px-3 text-sm font-semibold rounded-lg border text-center transition-all bg-white text-slate-700 border-slate-300 hover:bg-slate-50">
+            직렬 연결 🔗
+          </button>
+          <button onclick="setCircuitType('parallel')" id="btn-parallel" class="circuit-btn py-2.5 px-3 text-sm font-semibold rounded-lg border text-center transition-all bg-white text-slate-700 border-slate-300 hover:bg-slate-50">
+            병렬 연결 🌿
+          </button>
         </div>
 
-    </main>
+        <!-- Sliders -->
+        <div class="space-y-4">
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-sm font-medium text-slate-700">전압 ($V$)</label>
+              <span id="vVal" class="text-indigo-600 font-bold text-lg">6.0 V</span>
+            </div>
+            <input type="range" id="vRange" min="1" max="12" step="0.5" value="6" oninput="updateCircuit()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+          </div>
 
-    <!-- TOAST NOTIFICATION BANNER -->
-    <div id="toastNotification" class="fixed bottom-5 right-5 px-4 py-3 rounded-lg shadow-lg text-xs font-bold z-50 text-white transition-all duration-300 transform translate-y-10 opacity-0 pointer-events-none"></div>
+          <div>
+            <div class="flex justify-between items-center mb-1">
+              <label id="r1Label" class="text-sm font-medium text-slate-700">저항 ($R$)</label>
+              <span id="r1Val" class="text-amber-600 font-bold text-lg">10 Ω</span>
+            </div>
+            <input type="range" id="r1Range" min="2" max="30" step="1" value="10" oninput="updateCircuit()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-600">
+          </div>
 
-    <!-- JAVASCRIPT LOGIC -->
-    <script>
-        // Global State & Chart Instance Declarations
-        let simChartInstance = null;
-        let electronAnimFrame = null;
-        
-        // Electron Particle System
-        let electrons = [];
-        const NUM_ELECTRONS = 22;
+          <div id="r2Container" class="hidden">
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-sm font-medium text-slate-700">저항 2 ($R_2$)</label>
+              <span id="r2Val" class="text-emerald-600 font-bold text-lg">10 Ω</span>
+            </div>
+            <input type="range" id="r2Range" min="2" max="30" step="1" value="10" oninput="updateCircuit()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+          </div>
+        </div>
 
-        function initElectrons() {
-            electrons = [];
-            for (let i = 0; i < NUM_ELECTRONS; i++) {
-                electrons.push({
-                    d: (i / NUM_ELECTRONS) * 1300,
-                    branch: (i % 2 === 0) ? 1 : 2
-                });
-            }
-        }
+        <!-- Calculated Values Cards -->
+        <div class="grid grid-cols-3 gap-3 mt-5 pt-4 border-t border-slate-100 text-center">
+          <div class="bg-indigo-50 p-2.5 rounded-lg border border-indigo-100">
+            <div class="text-xs text-indigo-600 font-medium mb-0.5">전압 ($V$)</div>
+            <div id="calcV" class="text-base font-extrabold text-indigo-700">6.0 V</div>
+          </div>
+          <div class="bg-amber-50 p-2.5 rounded-lg border border-amber-100">
+            <div class="text-xs text-amber-600 font-medium mb-0.5">합성 저항 ($R_{total}$)</div>
+            <div id="calcR" class="text-base font-extrabold text-amber-700">10.0 Ω</div>
+          </div>
+          <div class="bg-rose-50 p-2.5 rounded-lg border border-rose-100">
+            <div class="text-xs text-rose-600 font-medium mb-0.5">전체 전류 ($I$)</div>
+            <div id="calcI" class="text-base font-extrabold text-rose-700">0.60 A</div>
+          </div>
+        </div>
+      </div>
 
-        let circuitType = 'single'; // 'single' | 'series' | 'parallel'
-        let currentGraphType = 'VI'; // 'VI' | 'RI'
+      <!-- Canvas Circuit -->
+      <div class="bg-slate-900 rounded-xl shadow-sm p-4 border border-slate-800 text-white flex flex-col items-center">
+        <div class="w-full flex justify-between items-center mb-2 px-2">
+          <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span> 실시간 회로 애니메이션 (전자 흐름)
+          </span>
+          <span id="branchCurrentInfo" class="text-xs text-cyan-300 font-mono"></span>
+        </div>
+        <canvas id="circuitCanvas" width="550" height="230" class="w-full max-w-full bg-slate-950 rounded-lg border border-slate-800"></canvas>
+      </div>
 
-        let voltage = 6.0;
-        let resistance1 = 20;
-        let resistance2 = 20;
-        let totalResistance = 20;
-        let totalCurrent = 0.30;
-        let branch1Current = 0.30;
-        let branch2Current = 0;
-        let voltage1 = 6.0;
-        let voltage2 = 0;
+      <button onclick="recordData()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-base">
+        <i class="fa-solid fa-plus-circle"></i> 현재 측정 데이터 수집하기
+      </button>
 
-        let currentStudentGroup = 1;
+    </section>
 
-        // Group Data Store
-        let groupDataStore = {
-            1: { submitted: false, ans1: '', ans2: '', ans3: '', feedback: '', achievement: '', records: [] },
-            2: { submitted: false, ans1: '', ans2: '', ans3: '', feedback: '', achievement: '', records: [] },
-            3: { submitted: false, ans1: '', ans2: '', ans3: '', feedback: '', achievement: '', records: [] },
-            4: { submitted: false, ans1: '', ans2: '', ans3: '', feedback: '', achievement: '', records: [] },
-            5: { submitted: false, ans1: '', ans2: '', ans3: '', feedback: '', achievement: '', records: [] },
-            6: { submitted: false, ans1: '', ans2: '', ans3: '', feedback: '', achievement: '', records: [] }
-        };
+    <!-- Right Column: Chart & Firebase Discussion -->
+    <section class="lg:col-span-5 flex flex-col gap-6">
 
-        window.addEventListener('DOMContentLoaded', () => {
-            initSimChart();
-            initElectrons();
-            initCircuitCanvas();
-            updateCircuit();
-            renderDataTable();
+      <!-- Dynamic Graph Card -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <h2 class="text-md font-bold text-slate-800 mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-chart-line text-indigo-600"></i> 실시간 $V-I$ 관계 그래프
+        </h2>
+        <div class="h-56 relative w-full">
+          <canvas id="simChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Data Table -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+        <h2 class="text-md font-bold text-slate-800 mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-table text-indigo-600"></i> 수집된 데이터 목록
+        </h2>
+        <div class="overflow-x-auto max-h-36">
+          <table class="w-full text-xs text-left text-slate-600">
+            <thead class="text-xs text-slate-700 uppercase bg-slate-100 sticky top-0">
+              <tr>
+                <th class="px-2 py-2">연결</th>
+                <th class="px-2 py-2">전압</th>
+                <th class="px-2 py-2">저항</th>
+                <th class="px-2 py-2">전류</th>
+                <th class="px-2 py-2 text-right">삭제</th>
+              </tr>
+            </thead>
+            <tbody id="dataTableBody">
+              <tr><td colspan="5" class="text-center py-4 text-slate-400">수집된 데이터가 없습니다.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Firebase Submission Box -->
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col gap-3">
+        <h2 class="text-md font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-paper-plane text-indigo-600"></i> 모둠 데이터 Firebase 전송
+        </h2>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">작성자 / 모둠원 이름</label>
+          <input type="text" id="studentName" placeholder="예: 김과학, 이탐구" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1">옴의 법칙 결론 및 그래프 해석</label>
+          <textarea id="groupConclusion" rows="3" placeholder="실험 데이터와 그래프 해석을 설명해보세요." class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500"></textarea>
+        </div>
+        <button onclick="submitToFirebase()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow transition-all text-sm flex items-center justify-center gap-2">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Firebase DB로 제출하기
+        </button>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ==================== 2. 교사용 대시보드 화면 ==================== -->
+  <main id="teacherView" class="hidden max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex-col gap-6">
+    
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+          <i class="fa-solid fa-chalkboard-user text-indigo-600"></i> Firebase 실시간 모둠 모니터링 & 피드백
+        </h2>
+        <p class="text-xs text-slate-500 mt-1">Firebase DB와 실시간 연동되어 모둠별 제출 현황이 자동으로 동기화됩니다.</p>
+      </div>
+      <button onclick="downloadCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-lg shadow transition-all flex items-center gap-2">
+        <i class="fa-solid fa-file-csv"></i> 학생 데이터 CSV 내려받기
+      </button>
+    </div>
+
+    <!-- Group Cards Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div id="groupCardsContainer" class="contents"></div>
+    </div>
+  </main>
+
+  <!-- 비밀번호 인증 모달 -->
+  <div id="passwordModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border border-slate-100">
+      <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
+        <i class="fa-solid fa-key"></i>
+      </div>
+      <h3 class="text-lg font-bold text-slate-800 mb-1">교사용 대시보드 인증</h3>
+      <p class="text-xs text-slate-500 mb-4">교사 전용 비밀번호를 입력해주세요.</p>
+      
+      <input type="password" id="teacherPasswordInput" placeholder="비밀번호 입력" onkeyup="if(event.key==='Enter') verifyPassword()" class="w-full px-4 py-2.5 text-center text-lg font-mono border border-slate-300 rounded-xl focus:outline-none focus:border-indigo-600 mb-4">
+      
+      <div class="flex gap-2">
+        <button onclick="closePasswordModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-all">취소</button>
+        <button onclick="verifyPassword()" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow transition-all">인증 확인</button>
+      </div>
+      <p class="text-[11px] text-slate-400 mt-3">(기본 초기 비밀번호: <code class="font-bold text-indigo-600">1234</code>)</p>
+    </div>
+  </div>
+
+  <!-- Firebase SDK Modules (ES Module Syntax) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // 전달해주신 Firebase 설정 정보
+    const firebaseConfig = {
+      apiKey: "AIzaSyBwVd1wiSjC0P1aSYvt_gO95YzTi16reSo",
+      authDomain: "ejje-d0631.firebaseapp.com",
+      projectId: "ejje-d0631",
+      storageBucket: "ejje-d0631.firebasestorage.app",
+      messagingSenderId: "987473333769",
+      appId: "1:987473333769:web:ba2def7c500e79453472d8",
+      measurementId: "G-09SQQD9TL1",
+      databaseURL: "https://ejje-d0631-default-rtdb.firebaseio.com" // Realtime Database URL
+    };
+
+    // Firebase 초기화
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getDatabase(app);
+
+    // Global Store
+    window.groupSubmissions = {
+      "1": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" },
+      "2": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" },
+      "3": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" },
+      "4": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" },
+      "5": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" },
+      "6": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" }
+    };
+
+    // Realtime Database 동기화 (구독)
+    const groupsRef = ref(db, 'groups');
+    onValue(groupsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        Object.keys(data).forEach(g => {
+          if (window.groupSubmissions[g]) {
+            window.groupSubmissions[g] = data[g];
+          }
         });
-
-        function showNotification(msg, type = 'info') {
-            const toast = document.getElementById('toastNotification');
-            if(!toast) return;
-            toast.innerText = msg;
-            toast.className = `fixed bottom-5 right-5 px-4 py-3 rounded-lg shadow-lg text-xs font-bold z-50 text-white transition-all duration-300 transform translate-y-0 opacity-100 pointer-events-auto ${
-                type === 'success' ? 'bg-emerald-600' : 'bg-slate-800'
-            }`;
-            setTimeout(() => {
-                toast.className = 'fixed bottom-5 right-5 px-4 py-3 rounded-lg shadow-lg text-xs font-bold z-50 text-white transition-all duration-300 transform translate-y-10 opacity-0 pointer-events-none';
-            }, 3000);
+        if (window.isTeacherAuthenticated) {
+          window.renderTeacherDashboard();
         }
+      }
+    });
 
-        function initSimChart() {
-            const ctx = document.getElementById('simChart')?.getContext('2d');
-            if (!ctx) return;
-            
-            simChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [
-                        {
-                            label: '이론 경향선',
-                            data: [],
-                            borderColor: '#0d9488',
-                            backgroundColor: 'rgba(13, 148, 136, 0.1)',
-                            fill: true,
-                            tension: 0.3,
-                            pointRadius: 3,
-                            pointBackgroundColor: '#0f766e'
-                        },
-                        {
-                            label: '현재 동작 지점',
-                            data: [],
-                            borderColor: '#f59e0b',
-                            backgroundColor: '#f59e0b',
-                            pointRadius: 8,
-                            pointHoverRadius: 10,
-                            showLine: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 0 },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            labels: { boxWidth: 12, font: { size: 10 } }
-                        }
-                    },
-                    scales: {
-                        x: { title: { display: true, text: '전압 (V)', font: { size: 10 } } },
-                        y: { title: { display: true, text: '전류 (A)', font: { size: 10 } }, min: 0 }
-                    }
-                }
-            });
+    // Firebase에 데이터 제출 함수
+    window.submitToFirebase = function() {
+      const groupNum = document.getElementById('groupSelect').value;
+      const studentName = document.getElementById('studentName').value.trim();
+      const conclusion = document.getElementById('groupConclusion').value.trim();
+
+      if (!studentName || !conclusion) {
+        window.showNotification('학생 이름과 토론 결론을 작성해주세요.');
+        return;
+      }
+
+      const { rTotal, iTotal } = window.calculateCircuit();
+      const typeLabel = window.circuitType === 'single' ? '단일' : (window.circuitType === 'series' ? '직렬' : '병렬');
+
+      const payload = {
+        name: `${groupNum}모둠 (${studentName})`,
+        circuit: typeLabel,
+        v: window.currentV,
+        r: parseFloat(rTotal.toFixed(1)),
+        i: parseFloat(iTotal.toFixed(2)),
+        conclusion: conclusion,
+        feedback: window.groupSubmissions[groupNum].feedback || "",
+        timestamp: new Date().toISOString()
+      };
+
+      set(ref(db, 'groups/' + groupNum), payload)
+        .then(() => {
+          window.showNotification(`${groupNum}모둠 데이터가 Firebase DB에 성공적으로 저장되었습니다!`);
+        })
+        .catch((err) => {
+          window.showNotification('Firebase 저장 실패: ' + err.message);
+        });
+    };
+
+    // 교사 피드백 Firebase 업데이트 함수
+    window.saveFeedbackToFirebase = function(groupNum) {
+      const fbText = document.getElementById(`feedback-${groupNum}`).value;
+      
+      set(ref(db, `groups/${groupNum}/feedback`), fbText)
+        .then(() => {
+          window.showNotification(`${groupNum}모둠 피드백이 전송되었습니다.`);
+        })
+        .catch((err) => {
+          window.showNotification('피드백 저장 오류: ' + err.message);
+        });
+    };
+  </script>
+
+  <!-- Simulation Application Logic Script -->
+  <script>
+    const TEACHER_PASSWORD = "1234";
+    window.isTeacherAuthenticated = false;
+
+    window.circuitType = 'single';
+    window.currentV = 6.0;
+    window.currentR1 = 10.0;
+    window.currentR2 = 10.0;
+    let collectedData = [];
+    let electronParticles = [];
+    let simChartInstance = null;
+
+    function showNotification(msg) {
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-5 right-5 bg-slate-800 text-white text-sm px-4 py-3 rounded-xl shadow-lg z-50 transition-opacity duration-300';
+      toast.innerText = msg;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+    window.showNotification = showNotification;
+
+    function requestTeacherAccess() {
+      if (window.isTeacherAuthenticated) {
+        switchView('teacher');
+      } else {
+        document.getElementById('passwordModal').classList.remove('hidden');
+        document.getElementById('teacherPasswordInput').focus();
+      }
+    }
+
+    function verifyPassword() {
+      const input = document.getElementById('teacherPasswordInput').value;
+      if (input === TEACHER_PASSWORD) {
+        window.isTeacherAuthenticated = true;
+        closePasswordModal();
+        switchView('teacher');
+        showNotification('교사 대시보드 접근 인증 성공!');
+      } else {
+        showNotification('비밀번호가 맞지 않습니다.');
+        document.getElementById('teacherPasswordInput').value = '';
+      }
+    }
+
+    function closePasswordModal() {
+      document.getElementById('passwordModal').classList.add('hidden');
+      document.getElementById('teacherPasswordInput').value = '';
+    }
+
+    function switchView(view) {
+      const studentView = document.getElementById('studentView');
+      const teacherView = document.getElementById('teacherView');
+      const tabStudent = document.getElementById('tab-student');
+      const tabTeacher = document.getElementById('tab-teacher');
+
+      if (view === 'student') {
+        studentView.classList.remove('hidden');
+        teacherView.classList.add('hidden');
+        tabStudent.className = 'px-3.5 py-1.5 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all';
+        tabTeacher.className = 'px-3.5 py-1.5 rounded-lg text-sm font-bold bg-indigo-700 hover:bg-indigo-800 text-white transition-all border border-indigo-500';
+      } else {
+        studentView.classList.add('hidden');
+        teacherView.classList.remove('hidden');
+        tabStudent.className = 'px-3.5 py-1.5 rounded-lg text-sm font-bold bg-indigo-700 hover:bg-indigo-800 text-white transition-all border border-indigo-500';
+        tabTeacher.className = 'px-3.5 py-1.5 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all';
+        renderTeacherDashboard();
+      }
+    }
+
+    function calculateCircuit() {
+      let rTotal = window.currentR1;
+      let i1 = 0, i2 = 0;
+
+      if (window.circuitType === 'single') {
+        rTotal = window.currentR1;
+        i1 = window.currentV / window.currentR1;
+      } else if (window.circuitType === 'series') {
+        rTotal = window.currentR1 + window.currentR2;
+        i1 = window.currentV / rTotal;
+        i2 = i1;
+      } else if (window.circuitType === 'parallel') {
+        rTotal = (window.currentR1 * window.currentR2) / (window.currentR1 + window.currentR2);
+        i1 = window.currentV / window.currentR1;
+        i2 = window.currentV / window.currentR2;
+      }
+
+      const iTotal = window.currentV / rTotal;
+      return { rTotal, iTotal, i1, i2 };
+    }
+    window.calculateCircuit = calculateCircuit;
+
+    function setCircuitType(type) {
+      window.circuitType = type;
+      document.querySelectorAll('.circuit-btn').forEach(btn => {
+        btn.className = 'circuit-btn py-2.5 px-3 text-sm font-semibold rounded-lg border text-center transition-all bg-white text-slate-700 border-slate-300 hover:bg-slate-50';
+      });
+      document.getElementById(`btn-${type}`).className = 'circuit-btn py-2.5 px-3 text-sm font-semibold rounded-lg border text-center transition-all bg-indigo-600 text-white border-indigo-600 shadow-sm';
+
+      const r2Container = document.getElementById('r2Container');
+      const r1Label = document.getElementById('r1Label');
+
+      if (type === 'single') {
+        r2Container.classList.add('hidden');
+        r1Label.innerText = '저항 (R)';
+      } else {
+        r2Container.classList.remove('hidden');
+        r1Label.innerText = '저항 1 (R₁)';
+      }
+      initElectrons();
+      updateCircuit();
+    }
+
+    function updateCircuit() {
+      window.currentV = parseFloat(document.getElementById('vRange').value);
+      window.currentR1 = parseFloat(document.getElementById('r1Range').value);
+      window.currentR2 = parseFloat(document.getElementById('r2Range').value);
+
+      document.getElementById('vVal').innerText = window.currentV.toFixed(1) + ' V';
+      document.getElementById('r1Val').innerText = window.currentR1.toFixed(0) + ' Ω';
+      document.getElementById('r2Val').innerText = window.currentR2.toFixed(0) + ' Ω';
+
+      const { rTotal, iTotal, i1, i2 } = calculateCircuit();
+
+      document.getElementById('calcV').innerText = window.currentV.toFixed(1) + ' V';
+      document.getElementById('calcR').innerText = rTotal.toFixed(1) + ' Ω';
+      document.getElementById('calcI').innerText = iTotal.toFixed(2) + ' A';
+
+      const branchInfo = document.getElementById('branchCurrentInfo');
+      if (window.circuitType === 'parallel') {
+        branchInfo.innerText = `가지전류: I₁ = ${i1.toFixed(2)}A, I₂ = ${i2.toFixed(2)}A`;
+      } else {
+        branchInfo.innerText = '';
+      }
+
+      updateChart(window.currentV, iTotal, rTotal);
+    }
+
+    function initChart() {
+      const ctx = document.getElementById('simChart').getContext('2d');
+      simChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [
+            { label: 'V-I 경향선', data: [], borderColor: '#6366f1', borderWidth: 2, fill: false, pointRadius: 0 },
+            { label: '현재 동작 지점', data: [], backgroundColor: '#f97316', borderColor: '#ffffff', borderWidth: 2, pointRadius: 7 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { type: 'linear', title: { display: true, text: '전압 V (Volt)' }, min: 0, max: 13 },
+            y: { title: { display: true, text: '전류 I (Ampere)' }, min: 0, max: 3 }
+          }
         }
-
-        function updateSimChart() {
-            if (!simChartInstance) return;
-
-            if (currentGraphType === 'VI') {
-                const vSteps = [0, 1.5, 3.0, 4.5, 6.0, 7.5, 9.0, 10.5, 12.0, 13.5, 15.0];
-                const curveData = vSteps.map(v => parseFloat((v / totalResistance).toFixed(3)));
-                
-                simChartInstance.data.labels = vSteps.map(v => `${v}V`);
-                simChartInstance.data.datasets[0].data = curveData;
-                simChartInstance.data.datasets[0].label = `V-I 비례 경향선 (R=${totalResistance.toFixed(1)}Ω)`;
-
-                const pointData = vSteps.map(v => (Math.abs(v - voltage) < 0.75 ? parseFloat(totalCurrent.toFixed(3)) : null));
-                simChartInstance.data.datasets[1].data = pointData;
-                simChartInstance.data.datasets[1].label = `현재 동작점 (${voltage.toFixed(1)}V, ${totalCurrent.toFixed(2)}A)`;
-
-                simChartInstance.options.scales.x.title.text = '전압 (V)';
-            } else {
-                const rSteps = [5, 10, 15, 20, 30, 40, 50, 60, 80, 100];
-                const curveData = rSteps.map(r => parseFloat((voltage / r).toFixed(3)));
-
-                simChartInstance.data.labels = rSteps.map(r => `${r}Ω`);
-                simChartInstance.data.datasets[0].data = curveData;
-                simChartInstance.data.datasets[0].label = `R-I 반비례 곡선 (V=${voltage.toFixed(1)}V)`;
-
-                const pointData = rSteps.map(r => (Math.abs(r - totalResistance) < 4.0 ? parseFloat(totalCurrent.toFixed(3)) : null));
-                simChartInstance.data.datasets[1].data = pointData;
-                simChartInstance.data.datasets[1].label = `현재 동작점 (${totalResistance.toFixed(1)}Ω, ${totalCurrent.toFixed(2)}A)`;
-
-                simChartInstance.options.scales.x.title.text = '합성 저항 (Ω)';
-            }
-            simChartInstance.update('none');
-        }
-
-        function updateCircuit() {
-            voltage = parseFloat(document.getElementById('voltageRange').value);
-            resistance1 = parseFloat(document.getElementById('resistanceRange').value);
-            resistance2 = parseFloat(document.getElementById('resistance2Range').value);
-
-            if (circuitType === 'single') {
-                totalResistance = resistance1;
-                totalCurrent = voltage / totalResistance;
-                branch1Current = totalCurrent;
-                branch2Current = 0;
-                voltage1 = voltage;
-                voltage2 = 0;
-
-                document.getElementById('calcFormulaText').innerText = 
-                    `I = ${voltage.toFixed(1)}V / ${totalResistance}Ω = ${totalCurrent.toFixed(2)}A`;
-            } else if (circuitType === 'series') {
-                totalResistance = resistance1 + resistance2;
-                totalCurrent = voltage / totalResistance;
-                branch1Current = totalCurrent;
-                branch2Current = totalCurrent;
-                voltage1 = totalCurrent * resistance1;
-                voltage2 = totalCurrent * resistance2;
-
-                document.getElementById('calcFormulaText').innerText = 
-                    `R_total = ${resistance1} + ${resistance2} = ${totalResistance}Ω | I = ${voltage.toFixed(1)}V / ${totalResistance}Ω = ${totalCurrent.toFixed(2)}A`;
-                document.getElementById('gaugeDetailsR1R2').innerText = `R1: ${resistance1}Ω (${voltage1.toFixed(1)}V) | R2: ${resistance2}Ω (${voltage2.toFixed(1)}V)`;
-                document.getElementById('gaugeDetailsI1I2').innerText = `직렬 전류: I1 = I2 = ${totalCurrent.toFixed(2)}A`;
-            } else if (circuitType === 'parallel') {
-                totalResistance = (resistance1 * resistance2) / (resistance1 + resistance2);
-                totalCurrent = voltage / totalResistance;
-                branch1Current = voltage / resistance1;
-                branch2Current = voltage / resistance2;
-                voltage1 = voltage;
-                voltage2 = voltage;
-
-                document.getElementById('calcFormulaText').innerText = 
-                    `R_total = (${resistance1}×${resistance2})/(${resistance1}+${resistance2}) = ${totalResistance.toFixed(1)}Ω | I = ${totalCurrent.toFixed(2)}A`;
-                document.getElementById('gaugeDetailsR1R2').innerText = `R1: ${resistance1}Ω | R2: ${resistance2}Ω`;
-                document.getElementById('gaugeDetailsI1I2').innerText = `가지 전류: I1=${branch1Current.toFixed(2)}A, I2=${branch2Current.toFixed(2)}A`;
-            }
-
-            document.getElementById('voltageValDisplay').innerText = `${voltage.toFixed(1)} V`;
-            document.getElementById('resistanceValDisplay').innerText = `${resistance1} Ω`;
-            document.getElementById('resistance2ValDisplay').innerText = `${resistance2} Ω`;
-
-            document.getElementById('gaugeVoltage').innerText = `${voltage.toFixed(1)} V`;
-            document.getElementById('gaugeCurrent').innerText = `${totalCurrent.toFixed(2)} A`;
-            document.getElementById('gaugeResistance').innerText = `${totalResistance.toFixed(1)} Ω`;
-
-            updateSimChart();
-        }
-
-        function setCircuitType(type) {
-            circuitType = type;
-            const btnSingle = document.getElementById('typeBtnSingle');
-            const btnSeries = document.getElementById('typeBtnSeries');
-            const btnParallel = document.getElementById('typeBtnParallel');
-            const res2Wrap = document.getElementById('resistor2Wrapper');
-            const subGauge = document.getElementById('subGaugeBranchInfo');
-
-            btnSingle.className = "text-xs font-bold px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 transition-all";
-            btnSeries.className = "text-xs font-bold px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 transition-all";
-            btnParallel.className = "text-xs font-bold px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 transition-all";
-
-            if (type === 'single') {
-                btnSingle.className = "text-xs font-bold px-2.5 py-1 rounded bg-teal-600 text-white transition-all shadow-sm";
-                res2Wrap.classList.add('hidden');
-                subGauge.classList.add('hidden');
-            } else if (type === 'series') {
-                btnSeries.className = "text-xs font-bold px-2.5 py-1 rounded bg-indigo-600 text-white transition-all shadow-sm";
-                res2Wrap.classList.remove('hidden');
-                subGauge.classList.remove('hidden');
-            } else if (type === 'parallel') {
-                btnParallel.className = "text-xs font-bold px-2.5 py-1 rounded bg-emerald-600 text-white transition-all shadow-sm";
-                res2Wrap.classList.remove('hidden');
-                subGauge.classList.remove('hidden');
-            }
-
-            updateCircuit();
-        }
-
-        function initCircuitCanvas() {
-            const canvas = document.getElementById('circuitCanvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-
-            function draw() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-                const width = canvas.width;
-                const height = canvas.height;
-                const pad = 50;
-
-                ctx.strokeStyle = '#64748b';
-                ctx.lineWidth = 5;
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                
-                // Draw circuit wires based on connection type
-                const pX1 = width / 2 - 100; // 175
-                const pX2 = width / 2 + 100; // 375
-                const pY1 = pad - 25;        // 25
-                const pY2 = pad + 25;        // 75
-
-                if (circuitType === 'parallel') {
-                    // Main outer loop wire excluding top parallel gap
-                    ctx.beginPath();
-                    ctx.moveTo(pad, pad);
-                    ctx.lineTo(pX1, pad);
-                    ctx.moveTo(pX2, pad);
-                    ctx.lineTo(width - pad, pad);
-                    ctx.lineTo(width - pad, height - pad);
-                    ctx.lineTo(pad, height - pad);
-                    ctx.lineTo(pad, pad);
-                    ctx.stroke();
-
-                    // Parallel branches
-                    ctx.beginPath();
-                    // Branch 1 (Top)
-                    ctx.moveTo(pX1, pad); ctx.lineTo(pX1, pY1); ctx.lineTo(pX2, pY1); ctx.lineTo(pX2, pad);
-                    // Branch 2 (Bottom)
-                    ctx.moveTo(pX1, pad); ctx.lineTo(pX1, pY2); ctx.lineTo(pX2, pY2); ctx.lineTo(pX2, pad);
-                    ctx.stroke();
-
-                    // Branch Junction Nodes (J1 & J2)
-                    ctx.fillStyle = '#06b6d4';
-                    ctx.beginPath(); ctx.arc(pX1, pad, 6, 0, Math.PI * 2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(pX2, pad, 6, 0, Math.PI * 2); ctx.fill();
-                } else {
-                    // Standard rectangular circuit wire
-                    ctx.beginPath();
-                    ctx.rect(pad, pad, width - pad * 2, height - pad * 2);
-                    ctx.stroke();
-                }
-
-                // DC Power
-                const batX = pad;
-                const batY = height / 2;
-                ctx.fillStyle = '#0f172a';
-                ctx.fillRect(batX - 15, batY - 30, 30, 60);
-
-                ctx.fillStyle = '#ef4444';
-                ctx.fillRect(batX - 8, batY - 25, 16, 8);
-                ctx.fillStyle = '#3b82f6';
-                ctx.fillRect(batX - 8, batY + 17, 16, 8);
-
-                ctx.fillStyle = '#f8fafc';
-                ctx.font = 'bold 10px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('DC 전원', batX, batY - 35);
-                ctx.fillText(`${voltage.toFixed(1)}V`, batX, batY + 5);
-
-                // Resistors Rendering
-                const resY = pad;
-                if (circuitType === 'single') {
-                    drawResistorBlock(ctx, width / 2, resY, `R1: ${resistance1}Ω`, '#10b981');
-                } else if (circuitType === 'series') {
-                    drawResistorBlock(ctx, width / 2 - 60, resY, `R1: ${resistance1}Ω`, '#10b981');
-                    drawResistorBlock(ctx, width / 2 + 60, resY, `R2: ${resistance2}Ω`, '#6366f1');
-                } else if (circuitType === 'parallel') {
-                    drawResistorBlock(ctx, width / 2, pY1, `R1: ${resistance1}Ω (${branch1Current.toFixed(2)}A)`, '#10b981');
-                    drawResistorBlock(ctx, width / 2, pY2, `R2: ${resistance2}Ω (${branch2Current.toFixed(2)}A)`, '#6366f1');
-                }
-
-                // Light Bulb
-                const bulbX = width / 2;
-                const bulbY = height - pad;
-                const power = voltage * totalCurrent; 
-                const glowRadius = Math.min(60, Math.max(5, power * 3));
-
-                if (totalCurrent > 0.01) {
-                    const grad = ctx.createRadialGradient(bulbX, bulbY, 2, bulbX, bulbY, glowRadius);
-                    grad.addColorStop(0, 'rgba(254, 240, 138, 0.95)');
-                    grad.addColorStop(0.5, 'rgba(251, 191, 36, 0.5)');
-                    grad.addColorStop(1, 'rgba(251, 191, 36, 0)');
-                    ctx.fillStyle = grad;
-                    ctx.beginPath();
-                    ctx.arc(bulbX, bulbY, glowRadius, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-
-                ctx.fillStyle = totalCurrent > 0.05 ? '#fef08a' : '#cbd5e1';
-                ctx.strokeStyle = '#475569';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(bulbX, bulbY, 18, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.strokeStyle = '#334155';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(bulbX - 9, bulbY - 9); ctx.lineTo(bulbX + 9, bulbY + 9);
-                ctx.moveTo(bulbX + 9, bulbY - 9); ctx.lineTo(bulbX - 9, bulbY + 9);
-                ctx.stroke();
-
-                ctx.fillStyle = '#f8fafc';
-                ctx.font = 'bold 10px sans-serif';
-                ctx.fillText('전구', bulbX, bulbY + 32);
-
-                // Ammeter
-                const amX = width - pad;
-                const amY = height / 2;
-                ctx.fillStyle = '#1e293b';
-                ctx.strokeStyle = '#06b6d4';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(amX, amY, 20, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.fillStyle = '#22d3ee';
-                ctx.font = 'bold 12px font-mono';
-                ctx.fillText('A', amX, amY - 2);
-                ctx.font = 'bold 10px font-mono';
-                ctx.fillText(`${totalCurrent.toFixed(2)}A`, amX, amY + 10);
-
-                // Electrons Animation Update
-                const speed = totalCurrent * 3.5;
-                ctx.fillStyle = '#38bdf8';
-
-                if (circuitType === 'parallel') {
-                    const loopLen = 1350;
-                    const totalBranchI = branch1Current + branch2Current;
-                    const p1 = totalBranchI > 0 ? (branch1Current / totalBranchI) : 0.5;
-
-                    electrons.forEach(e => {
-                        const prevD = e.d;
-                        e.d += speed;
-                        if (e.d >= loopLen) {
-                            e.d -= loopLen;
-                        }
-                        
-                        if (prevD < 125 && e.d >= 125) {
-                            e.branch = Math.random() < p1 ? 1 : 2;
-                        }
-
-                        const pos = getParallelPosition(e.d, e.branch, pad, width, height);
-                        ctx.beginPath();
-                        ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
-                        ctx.fill();
-                    });
-                } else {
-                    const loopLen = 1300;
-                    electrons.forEach(e => {
-                        e.d += speed;
-                        if (e.d >= loopLen) {
-                            e.d -= loopLen;
-                        }
-                        const pos = getSingleSeriesPosition(e.d, pad, width, height);
-                        ctx.beginPath();
-                        ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
-                        ctx.fill();
-                    });
-                }
-
-                electronAnimFrame = requestAnimationFrame(draw);
-            }
-
-            draw();
-        }
-
-        function getSingleSeriesPosition(d, pad, w, h) {
-            const topW = w - pad * 2;
-            const rightH = h - pad * 2;
-            const bottomW = topW;
-
-            if (d < topW) {
-                return { x: pad + d, y: pad };
-            } else if (d < topW + rightH) {
-                return { x: w - pad, y: pad + (d - topW) };
-            } else if (d < topW + rightH + bottomW) {
-                return { x: (w - pad) - (d - topW - rightH), y: h - pad };
-            } else {
-                return { x: pad, y: (h - pad) - (d - topW - rightH - bottomW) };
-            }
-        }
-
-        function getParallelPosition(d, branch, pad, w, h) {
-            const pX1 = w / 2 - 100; // 175
-            const pX2 = w / 2 + 100; // 375
-
-            if (d < 125) {
-                return { x: pad + d, y: pad };
-            } else if (d < 375) {
-                const bd = d - 125;
-                if (branch === 1) {
-                    if (bd < 25) return { x: pX1, y: pad - bd };
-                    else if (bd < 225) return { x: pX1 + (bd - 25), y: pad - 25 };
-                    else return { x: pX2, y: (pad - 25) + (bd - 225) };
-                } else {
-                    if (bd < 25) return { x: pX1, y: pad + bd };
-                    else if (bd < 225) return { x: pX1 + (bd - 25), y: pad + 25 };
-                    else return { x: pX2, y: (pad + 25) - (bd - 225) };
-                }
-            } else {
-                const md = d - 375;
-                if (md < 125) {
-                    return { x: pX2 + md, y: pad };
-                } else if (md < 325) {
-                    return { x: w - pad, y: pad + (md - 125) };
-                } else if (md < 775) {
-                    return { x: (w - pad) - (md - 325), y: h - pad };
-                } else {
-                    return { x: pad, y: (h - pad) - (md - 775) };
-                }
-            }
-        }
-
-        function drawResistorBlock(ctx, x, y, label, strokeColor) {
-            ctx.fillStyle = '#1e293b';
-            ctx.fillRect(x - 38, y - 12, 76, 24);
-            ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x - 38, y - 12, 76, 24);
-
-            ctx.fillStyle = '#f8fafc';
-            ctx.font = 'bold 10px font-mono';
-            ctx.textAlign = 'center';
-            ctx.fillText(label, x, y + 4);
-        }
-
-        function setGraphType(type) {
-            currentGraphType = type;
-            const btnVI = document.getElementById('btnGraphVI');
-            const btnRI = document.getElementById('btnGraphRI');
-
-            if (type === 'VI') {
-                btnVI.className = 'text-[11px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded';
-                btnRI.className = 'text-[11px] bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium px-2 py-0.5 rounded';
-            } else {
-                btnRI.className = 'text-[11px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded';
-                btnVI.className = 'text-[11px] bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium px-2 py-0.5 rounded';
-            }
-            updateSimChart();
-        }
-
-        function recordDataPoint() {
-            const groupData = groupDataStore[currentStudentGroup];
-            const typeLabel = circuitType === 'single' ? '단일' : (circuitType === 'series' ? '직렬' : '병렬');
-            
-            groupData.records.push({
-                type: typeLabel,
-                v: voltage,
-                rTotal: parseFloat(totalResistance.toFixed(1)),
-                iTotal: parseFloat(totalCurrent.toFixed(2))
-            });
-
-            renderDataTable();
-            showNotification(`${currentStudentGroup}모둠 데이터가 기록되었습니다.`, 'success');
-        }
-
-        function clearRecordedData() {
-            groupDataStore[currentStudentGroup].records = [];
-            renderDataTable();
-        }
-
-        function renderDataTable() {
-            const tbody = document.getElementById('dataTableBody');
-            if(!tbody) return;
-
-            const records = groupDataStore[currentStudentGroup].records;
-
-            if (!records || records.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center text-slate-400 py-8 font-sans">
-                            아직 기록된 데이터가 없습니다.<br>시뮬레이터를 조작하고 '데이터 기록하기'를 누르세요.
-                        </td>
-                    </tr>`;
-                return;
-            }
-
-            tbody.innerHTML = records.map((rec, idx) => `
-                <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="p-2 text-center font-bold text-slate-500">${idx + 1}</td>
-                    <td class="p-2">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                            rec.type === '직렬' ? 'bg-indigo-100 text-indigo-800' : (rec.type === '병렬' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700')
-                        }">
-                            ${rec.type}
-                        </span>
-                    </td>
-                    <td class="p-2 text-amber-600 font-bold">${rec.v.toFixed(1)} V</td>
-                    <td class="p-2 text-emerald-600 font-bold">${rec.rTotal} Ω</td>
-                    <td class="p-2 text-cyan-600 font-bold">${rec.iTotal.toFixed(2)} A</td>
-                </tr>
-            `).join('');
-        }
-
-        function changeCurrentGroup(val) {
-            currentStudentGroup = parseInt(val);
-            renderDataTable();
-            
-            const g = groupDataStore[currentStudentGroup];
-            document.getElementById('ans1').value = g.ans1 || '';
-            document.getElementById('ans2').value = g.ans2 || '';
-            document.getElementById('ans3').value = g.ans3 || '';
-
-            updateStudentFeedbackUI();
-        }
-
-        function handleStudentSubmit(e) {
-            e.preventDefault();
-            const g = groupDataStore[currentStudentGroup];
-            g.ans1 = document.getElementById('ans1').value;
-            g.ans2 = document.getElementById('ans2').value;
-            g.ans3 = document.getElementById('ans3').value;
-            g.submitted = true;
-
-            showNotification(`${currentStudentGroup}모둠의 탐구 및 토론 결과가 저장되었습니다!`, 'success');
-            updateStudentFeedbackUI();
-        }
-
-        function updateStudentFeedbackUI() {
-            const g = groupDataStore[currentStudentGroup];
-            const feedbackContent = document.getElementById('feedbackContent');
-            const achievementBadge = document.getElementById('achievementBadge');
-            const badgeText = document.getElementById('badgeText');
-            const statusTag = document.getElementById('submissionStatusTag');
-
-            if (g.submitted) {
-                statusTag.innerHTML = `<span class="bg-teal-100 text-teal-800 text-xs font-bold px-2.5 py-1 rounded">제출 완료</span>`;
-            } else {
-                statusTag.innerHTML = `<span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-1 rounded">작성 중</span>`;
-            }
-
-            if (g.feedback) {
-                feedbackContent.innerText = `"${g.feedback}"`;
-                feedbackContent.className = "text-xs text-slate-800 leading-relaxed font-medium bg-amber-50 p-3 rounded-lg border border-amber-200";
-                achievementBadge.classList.remove('hidden');
-                badgeText.innerText = `${g.achievement || '기본'} 단계 도달`;
-            } else {
-                feedbackContent.innerText = "토론 내용을 작성하여 제출하면 선생님의 과정 중심 피드백 및 성취 수준 안내가 도착합니다.";
-                feedbackContent.className = "text-xs text-slate-600 leading-relaxed italic";
-                achievementBadge.classList.add('hidden');
-            }
-        }
-
-        function switchStudentTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('[id^="tabBtn-"]').forEach(el => {
-                el.className = 'text-slate-500 px-5 py-3 text-sm font-medium flex items-center gap-2 border-b-2 border-transparent hover:text-slate-700 transition-all';
-            });
-
-            document.getElementById(tabId).classList.remove('hidden');
-            document.getElementById(`tabBtn-${tabId}`).className = 'tab-active px-5 py-3 text-sm font-medium flex items-center gap-2 border-b-2 transition-all';
-        }
-
-        async function sendAiQuery() {
-            const inputEl = document.getElementById('aiQueryInput');
-            const prompt = inputEl.value.trim();
-            if(!prompt) return;
-
-            appendChatMessage('user', prompt);
-            inputEl.value = '';
-
-            const loadingId = appendChatMessage('ai', 'Gemini AI 답변을 생성 중입니다...', true);
-
-            try {
-                const apiKey = "";
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-                const systemInstruction = "당신은 중학교 2학년 과학 선생님 AI입니다. 옴의 법칙(V=IR), 저항의 직렬 및 병렬 연결 원리, 그래프 해석에 대한 친절하고 명쾌한 힌트를 제공하세요.";
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }],
-                        systemInstruction: { parts: [{ text: systemInstruction }] }
-                    })
-                });
-
-                const result = await response.json();
-                const text = result?.candidates?.[0]?.content?.parts?.[0]?.text || "답변을 가져오는 데 실패했습니다. 다시 시도해 주세요.";
-
-                updateChatMessage(loadingId, text);
-
-            } catch (err) {
-                let fallbackMsg = "옴의 법칙(V=I×R)에 의하면 전류는 전압에 비례하고 합성 저항에 반비례합니다. 직렬 연결 시 합성 저항은 R1+R2로 커지고, 병렬 연결 시 합성 저항은 줄어들어 전류가 더 많이 흐르게 됩니다.";
-                updateChatMessage(loadingId, fallbackMsg);
-            }
-        }
-
-        function askPresetAi(questionText) {
-            document.getElementById('aiQueryInput').value = questionText;
-            sendAiQuery();
-        }
-
-        function appendChatMessage(role, text, isLoading = false) {
-            const chatBox = document.getElementById('chatBox');
-            const msgId = 'msg-' + Date.now();
-            const isUser = role === 'user';
-
-            const html = `
-                <div id="${msgId}" class="flex gap-2 ${isUser ? 'justify-end' : ''}">
-                    ${!isUser ? `<div class="w-7 h-7 rounded-full bg-teal-600 text-white flex items-center justify-center text-xs font-bold flex-shrink-0">AI</div>` : ''}
-                    <div class="${isUser ? 'bg-teal-600 text-white' : 'bg-white border border-slate-200 text-slate-700'} rounded-lg p-3 text-xs max-w-[80%] shadow-sm ${isLoading ? 'animate-pulse' : ''}">
-                        ${text}
-                    </div>
+      });
+    }
+
+    function updateChart(v, i, rTotal) {
+      if (!simChartInstance) return;
+      const curvePoints = [];
+      for (let x = 0; x <= 12; x += 0.5) {
+        curvePoints.push({ x: x, y: x / rTotal });
+      }
+      simChartInstance.data.datasets[0].data = curvePoints;
+      simChartInstance.data.datasets[1].data = [{ x: v, y: i }];
+      simChartInstance.update('none');
+    }
+
+    function recordData() {
+      const { rTotal, iTotal } = calculateCircuit();
+      const typeLabel = window.circuitType === 'single' ? '단일' : (window.circuitType === 'series' ? '직렬' : '병렬');
+      
+      const entry = { id: Date.now(), type: typeLabel, v: window.currentV, r: rTotal.toFixed(1), i: iTotal.toFixed(2) };
+      collectedData.push(entry);
+      renderTable();
+      showNotification('데이터가 기록되었습니다.');
+    }
+
+    function deleteData(id) {
+      collectedData = collectedData.filter(item => item.id !== id);
+      renderTable();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('dataTableBody');
+      if (collectedData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-slate-400">수집된 데이터가 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = collectedData.map(item => `
+        <tr class="border-b border-slate-100 hover:bg-slate-50">
+          <td class="px-2 py-2 font-medium">${item.type}</td>
+          <td class="px-2 py-2">${item.v} V</td>
+          <td class="px-2 py-2">${item.r} Ω</td>
+          <td class="px-2 py-2 font-bold text-indigo-600">${item.i} A</td>
+          <td class="px-2 py-2 text-right">
+            <button onclick="deleteData(${item.id})" class="text-rose-500 hover:text-rose-700">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderTeacherDashboard() {
+      const container = document.getElementById('groupCardsContainer');
+      let html = '';
+
+      for (let g = 1; g <= 6; g++) {
+        const data = window.groupSubmissions[g] || { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "제출 내역 없음", feedback: "" };
+        const isSubmitted = data.name !== "";
+
+        html += `
+          <div class="bg-white rounded-xl shadow-sm border ${isSubmitted ? 'border-indigo-200' : 'border-slate-200'} p-5 flex flex-col justify-between">
+            <div>
+              <div class="flex justify-between items-center mb-3">
+                <span class="font-extrabold text-base ${isSubmitted ? 'text-indigo-600' : 'text-slate-400'}">${g} 모둠</span>
+                <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${isSubmitted ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}">
+                  ${isSubmitted ? '제출 완료' : '미제출'}
+                </span>
+              </div>
+              <div class="text-xs text-slate-500 mb-2 font-medium">${data.name || '학생 미등록'}</div>
+
+              <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs mb-3 space-y-1">
+                <div><span class="text-slate-400">연결방식:</span> <strong>${data.circuit}</strong></div>
+                <div><span class="text-slate-400">전압 / 저항:</span> <strong>${data.v}V / ${data.r}Ω</strong></div>
+                <div><span class="text-slate-400">전류:</span> <strong class="text-indigo-600">${data.i}A</strong></div>
+              </div>
+
+              <div class="mb-4">
+                <div class="text-xs font-bold text-slate-700 mb-1">모둠 서술형 결론:</div>
+                <div class="text-xs text-slate-600 bg-amber-50/50 p-2.5 rounded-lg border border-amber-100 min-h-[50px] leading-relaxed">
+                  ${data.conclusion}
                 </div>
-            `;
-            chatBox.insertAdjacentHTML('beforeend', html);
-            chatBox.scrollTop = chatBox.scrollHeight;
-            return msgId;
-        }
+              </div>
+            </div>
 
-        function updateChatMessage(msgId, newText) {
-            const msgEl = document.getElementById(msgId);
-            if(msgEl) {
-                const textContainer = msgEl.querySelector('div:last-child');
-                textContainer.classList.remove('animate-pulse');
-                textContainer.innerText = newText;
-            }
-        }
-    </script>
+            <div class="pt-3 border-t border-slate-100">
+              <label class="block text-xs font-bold text-slate-700 mb-1">교사 피드백 입력</label>
+              
+              <div class="flex gap-1 mb-2">
+                <button onclick="applyPresetFeedback('${g}', '심화')" class="text-[10px] px-2 py-1 bg-indigo-50 text-indigo-700 rounded border border-indigo-200 hover:bg-indigo-100">심화</button>
+                <button onclick="applyPresetFeedback('${g}', '기본')" class="text-[10px] px-2 py-1 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 hover:bg-emerald-100">기본</button>
+                <button onclick="applyPresetFeedback('${g}', '기초')" class="text-[10px] px-2 py-1 bg-amber-50 text-amber-700 rounded border border-amber-200 hover:bg-amber-100">기초</button>
+              </div>
+
+              <textarea id="feedback-${g}" rows="2" placeholder="피드백을 작성하세요..." class="w-full text-xs p-2 rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500 mb-2">${data.feedback || ''}</textarea>
+              <button onclick="window.saveFeedbackToFirebase('${g}')" class="w-full py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg transition-all">
+                Firebase로 피드백 전송
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+    window.renderTeacherDashboard = renderTeacherDashboard;
+
+    function applyPresetFeedback(g, level) {
+      const textarea = document.getElementById(`feedback-${g}`);
+      if (level === '심화') {
+        textarea.value = "[심화] 정량 데이터 기반으로 옴의 법칙 원리를 명확하게 설명했습니다.";
+      } else if (level === '기본') {
+        textarea.value = "[기본] 전압과 전류, 저항 사이의 비례/반비례 관계를 바르게 탐구하였습니다.";
+      } else if (level === '기초') {
+        textarea.value = "[기초] 저항 크기에 따른 전류 변화 경향성을 추가 실험을 통해 재확인해보세요.";
+      }
+    }
+
+    function downloadCSV() {
+      let csvContent = "\uFEFF";
+      csvContent += "모둠,학생명,회로연결,전압(V),합성저항(ohm),전류(A),모둠결론,교사피드백\n";
+
+      for (let g = 1; g <= 6; g++) {
+        const d = window.groupSubmissions[g] || {};
+        const row = [
+          `"${g}모둠"`,
+          `"${(d.name || '-').replace(/"/g, '""')}"`,
+          `"${d.circuit || '-'}"`,
+          `"${d.v || 0}"`,
+          `"${d.r || 0}"`,
+          `"${d.i || 0}"`,
+          `"${(d.conclusion || '').replace(/"/g, '""')}"`,
+          `"${(d.feedback || '').replace(/"/g, '""')}"`
+        ];
+        csvContent += row.join(",") + "\n";
+      }
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `옴의법칙_Firebase_학급데이터_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Canvas Circuit Animation Logic
+    function initElectrons() {
+      electronParticles = [];
+      for (let i = 0; i < 24; i++) {
+        electronParticles.push({ progress: i / 24, branch: i % 2 === 0 ? 1 : 2 });
+      }
+    }
+
+    function drawCircuit() {
+      const canvas = document.getElementById('circuitCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+      const { iTotal } = calculateCircuit();
+      const speed = iTotal * 0.008;
+
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 4;
+
+      if (window.circuitType === 'parallel') {
+        ctx.beginPath();
+        ctx.moveTo(100, h / 2); ctx.lineTo(175, h / 2);
+        ctx.moveTo(175, 60); ctx.lineTo(375, 60);
+        ctx.moveTo(175, 170); ctx.lineTo(375, 170);
+        ctx.moveTo(175, 60); ctx.lineTo(175, 170);
+        ctx.moveTo(375, 60); ctx.lineTo(375, 170);
+        ctx.moveTo(375, h / 2); ctx.lineTo(450, h / 2);
+        ctx.moveTo(450, h / 2); ctx.lineTo(450, 200); ctx.lineTo(100, 200); ctx.lineTo(100, h / 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#22d3ee';
+        ctx.beginPath(); ctx.arc(175, h / 2, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(375, h / 2, 5, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.rect(100, 50, 350, 140);
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = '#ef4444'; ctx.fillRect(85, 105, 10, 30);
+      ctx.fillStyle = '#3b82f6'; ctx.fillRect(105, 112, 6, 16);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 12px sans-serif'; ctx.fillText('DC', 85, 95);
+
+      if (window.circuitType === 'single') {
+        drawResistor(ctx, 250, 50, `R = ${window.currentR1}Ω`);
+      } else if (window.circuitType === 'series') {
+        drawResistor(ctx, 200, 50, `R₁ = ${window.currentR1}Ω`);
+        drawResistor(ctx, 320, 50, `R₂ = ${window.currentR2}Ω`);
+      } else if (window.circuitType === 'parallel') {
+        drawResistor(ctx, 275, 60, `R₁ = ${window.currentR1}Ω`);
+        drawResistor(ctx, 275, 170, `R₂ = ${window.currentR2}Ω`);
+      }
+
+      ctx.fillStyle = '#38bdf8';
+      electronParticles.forEach(p => {
+        p.progress = (p.progress + speed) % 1;
+        let pos = getElectronPosition(p.progress, p.branch);
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      requestAnimationFrame(drawCircuit);
+    }
+
+    function drawResistor(ctx, x, y, label) {
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(x - 25, y - 10, 50, 20);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x - 25, y - 10, 50, 20);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, x, y - 15);
+    }
+
+    function getElectronPosition(progress, branch) {
+      if (window.circuitType === 'parallel') {
+        const totalLen = 700;
+        let d = progress * totalLen;
+        if (d < 75) return { x: 100 + d, y: 115 };
+        d -= 75;
+        if (d < 55) return { x: 175, y: branch === 1 ? 115 - (d / 55) * 55 : 115 + (d / 55) * 55 };
+        d -= 55;
+        if (d < 200) return { x: 175 + d, y: branch === 1 ? 60 : 170 };
+        d -= 200;
+        if (d < 55) return { x: 375, y: branch === 1 ? 60 + (d / 55) * 55 : 170 - (d / 55) * 55 };
+        d -= 55;
+        if (d < 75) return { x: 375 + d, y: 115 };
+        d -= 75;
+        if (d < 75) return { x: 450, y: 115 + (d / 75) * 75 };
+        d -= 75;
+        if (d < 350) return { x: 450 - d, y: 190 };
+        return { x: 100, y: 190 - (d - 350) };
+      } else {
+        const totalLen = 980;
+        let d = progress * totalLen;
+        if (d < 350) return { x: 100 + d, y: 50 };
+        d -= 350;
+        if (d < 140) return { x: 450, y: 50 + d };
+        d -= 140;
+        if (d < 350) return { x: 450 - d, y: 190 };
+        d -= 350;
+        return { x: 100, y: 190 - d };
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initChart();
+      initElectrons();
+      updateCircuit();
+      requestAnimationFrame(drawCircuit);
+    });
+  </script>
 </body>
 </html>
