@@ -181,13 +181,12 @@
         </div>
       </div>
 
-      <!-- Firebase Submission Box with Submission Status -->
+      <!-- Firebase Submission Box -->
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col gap-3">
         <div class="flex justify-between items-center">
           <h2 class="text-md font-bold text-slate-800 flex items-center gap-2">
             <i class="fa-solid fa-paper-plane text-indigo-600"></i> 모둠 데이터 Firebase 전송
           </h2>
-          <!-- Submission status indicator -->
           <span id="studentSubmissionStatus" class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-semibold">
             🔴 미제출
           </span>
@@ -251,6 +250,7 @@
 
   <!-- Firebase Integration Script -->
   <script>
+    // 싱가포르 리전 URL이 반영된 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyBwVd1wiSjC0P1aSYvt_gO95YzTi16reSo",
       authDomain: "ejje-d0631.firebaseapp.com",
@@ -259,7 +259,7 @@
       messagingSenderId: "987473333769",
       appId: "1:987473333769:web:ba2def7c500e79453472d8",
       measurementId: "G-09SQQD9TL1",
-      databaseURL: "https://ejje-d0631-default-rtdb.firebaseio.com"
+      databaseURL: "https://ejje-d0631-default-rtdb.asia-southeast1.firebasedatabase.app/"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -271,7 +271,7 @@
       "2": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
       "3": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
       "4": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
-      "5": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
+      "5": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
       "6": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" }
     };
 
@@ -305,7 +305,6 @@
       });
     }
 
-    // 학생용 제출 상태 UI 갱신 함수
     function checkCurrentGroupSubmissionStatus() {
       const currentGroup = document.getElementById('groupSelect').value;
       const statusBadge = document.getElementById('studentSubmissionStatus');
@@ -321,7 +320,6 @@
       }
     }
 
-    // 학생 데이터 Firebase 제출
     function submitToFirebase() {
       const groupNum = document.getElementById('groupSelect').value;
       const studentName = document.getElementById('studentName').value.trim();
@@ -354,7 +352,7 @@
         rtdb.ref('groups/' + groupNum).set(payload),
         firestore.collection('groups').doc(groupNum).set(payload)
       ]).then(() => {
-        showNotification(`${groupNum}모둠 데이터 제출이 성공적으로 확인되었습니다!`);
+        showNotification(`${groupNum}모둠 데이터 제출이 싱가포르 RTDB에 전송되었습니다!`);
       }).catch((err) => {
         showNotification(`${groupNum}모둠 제출 완료 (화면 반영 확인됨)`);
       });
@@ -513,7 +511,6 @@
       updateChart(window.currentV, iTotal, rTotal);
     }
 
-    // Chart.js Multi-Point Graph Initialization
     function initChart() {
       const ctx = document.getElementById('simChart').getContext('2d');
       simChartInstance = new Chart(ctx, {
@@ -568,22 +565,18 @@
       });
     }
 
-    // Dynamic Multi-Point Chart Update Logic
     function updateChart(v, i, rTotal) {
       if (!simChartInstance) return;
 
-      // 1. Theoretical curve
       const curvePoints = [];
       for (let x = 0; x <= 12; x += 0.5) {
         curvePoints.push({ x: x, y: x / rTotal });
       }
 
-      // 2. Collected Multi-Points
       const sortedCollectedPoints = collectedData
         .map(d => ({ x: parseFloat(d.v), y: parseFloat(d.i) }))
         .sort((a, b) => a.x - b.x);
 
-      // Datasets update
       simChartInstance.data.datasets[0].data = sortedCollectedPoints.length >= 2 ? sortedCollectedPoints : [];
       simChartInstance.data.datasets[1].data = sortedCollectedPoints;
       simChartInstance.data.datasets[2].data = curvePoints;
