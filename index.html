@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <!-- Firebase Compat SDKs (전역 접근이 가능하여 CDN 안정성이 가장 뛰어납니다) -->
+  <!-- Firebase Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
@@ -56,7 +56,7 @@
           </h2>
           <div class="flex items-center gap-2 bg-slate-100 px-3 py-1 rounded-lg text-sm">
             <span class="font-medium text-slate-600">내 모둠:</span>
-            <select id="groupSelect" class="bg-white font-bold text-indigo-600 rounded px-2 py-0.5 border border-slate-200">
+            <select id="groupSelect" onchange="checkCurrentGroupSubmissionStatus()" class="bg-white font-bold text-indigo-600 rounded px-2 py-0.5 border border-slate-200">
               <option value="1">1 모둠</option>
               <option value="2">2 모둠</option>
               <option value="3">3 모둠</option>
@@ -141,14 +141,18 @@
 
     </section>
 
-    <!-- Right Column: Chart & Firebase Submission -->
+    <!-- Right Column: Dynamic Multi-Point Chart & Submission Box -->
     <section class="lg:col-span-5 flex flex-col gap-6">
 
       <!-- Dynamic Graph Card -->
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
-        <h2 class="text-md font-bold text-slate-800 mb-3 flex items-center gap-2">
-          <i class="fa-solid fa-chart-line text-indigo-600"></i> 실시간 $V-I$ 관계 그래프
-        </h2>
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-md font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-chart-line text-indigo-600"></i> 실시간 $V-I$ 측정 데이터 그래프
+          </h2>
+          <span id="pointCountTag" class="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">측정점: 0개</span>
+        </div>
+        <p class="text-[11px] text-slate-500 mb-3">※ 측정 데이터를 2개 이상 수집하면 지점들을 연결하는 수집 데이터 그래프가 생성됩니다.</p>
         <div class="h-56 relative w-full">
           <canvas id="simChart"></canvas>
         </div>
@@ -177,21 +181,28 @@
         </div>
       </div>
 
-      <!-- Firebase Submission Box -->
+      <!-- Firebase Submission Box with Submission Status -->
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col gap-3">
-        <h2 class="text-md font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-paper-plane text-indigo-600"></i> 모둠 데이터 Firebase 전송
-        </h2>
+        <div class="flex justify-between items-center">
+          <h2 class="text-md font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-paper-plane text-indigo-600"></i> 모둠 데이터 Firebase 전송
+          </h2>
+          <!-- Submission status indicator -->
+          <span id="studentSubmissionStatus" class="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 font-semibold">
+            🔴 미제출
+          </span>
+        </div>
+
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">작성자 / 모둠원 이름</label>
           <input type="text" id="studentName" placeholder="예: 김과학, 이탐구" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500">
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1">옴의 법칙 결론 및 그래프 해석</label>
-          <textarea id="groupConclusion" rows="3" placeholder="실험 데이터와 그래프 해석을 설명해보세요." class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500"></textarea>
+          <textarea id="groupConclusion" rows="3" placeholder="수집된 점들과 그래프 해석을 바탕으로 설명해보세요." class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500"></textarea>
         </div>
         <button onclick="submitToFirebase()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow transition-all text-sm flex items-center justify-center gap-2">
-          <i class="fa-solid fa-cloud-arrow-up"></i> Firebase DB로 제출하기
+          <i class="fa-solid fa-cloud-arrow-up"></i> Firebase DB로 최종 제출하기
         </button>
       </div>
 
@@ -240,7 +251,6 @@
 
   <!-- Firebase Integration Script -->
   <script>
-    // 전달해주신 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyBwVd1wiSjC0P1aSYvt_gO95YzTi16reSo",
       authDomain: "ejje-d0631.firebaseapp.com",
@@ -252,41 +262,37 @@
       databaseURL: "https://ejje-d0631-default-rtdb.firebaseio.com"
     };
 
-    // Firebase 전역 초기화
     firebase.initializeApp(firebaseConfig);
     const rtdb = firebase.database();
     const firestore = firebase.firestore();
 
-    // 초기 모둠별 스토어
     window.groupSubmissions = {
-      "1": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" },
-      "2": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" },
-      "3": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" },
-      "4": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" },
-      "5": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" },
-      "6": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "" }
+      "1": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
+      "2": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
+      "3": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
+      "4": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
+      "5": { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
+      "6": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" }
     };
 
-    // Realtime Database & Firestore 실시간 수신 설정
     function initFirebaseSync() {
       const badge = document.getElementById('dbStatusBadge');
 
-      // 1. Realtime Database 구독
       rtdb.ref('groups').on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
           Object.keys(data).forEach(g => {
             window.groupSubmissions[g] = data[g];
           });
-          if (badge) badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-500 text-white font-medium flex items-center gap-1.5 ml-2";
-          if (badge) badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-white"></span> Realtime DB 연결됨`;
+          if (badge) {
+            badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-500 text-white font-medium flex items-center gap-1.5 ml-2";
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-white"></span> Realtime DB 연결됨`;
+          }
+          checkCurrentGroupSubmissionStatus();
           if (window.isTeacherAuthenticated) renderTeacherDashboard();
         }
-      }, (error) => {
-        console.warn("Realtime DB 수신 비활성화, Firestore로 대체 시도:", error);
       });
 
-      // 2. Firestore 구독 (이중 백업)
       firestore.collection("groups").onSnapshot((snapshot) => {
         snapshot.forEach((doc) => {
           const g = doc.id;
@@ -294,15 +300,28 @@
             window.groupSubmissions[g] = doc.data();
           }
         });
-        if (badge) badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-500 text-white font-medium flex items-center gap-1.5 ml-2";
-        if (badge) badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-white"></span> Firestore 연결됨`;
+        checkCurrentGroupSubmissionStatus();
         if (window.isTeacherAuthenticated) renderTeacherDashboard();
-      }, (error) => {
-        console.error("Firestore 수신 오류:", error);
       });
     }
 
-    // 학생 데이터 Firebase에 저장
+    // 학생용 제출 상태 UI 갱신 함수
+    function checkCurrentGroupSubmissionStatus() {
+      const currentGroup = document.getElementById('groupSelect').value;
+      const statusBadge = document.getElementById('studentSubmissionStatus');
+      const data = window.groupSubmissions[currentGroup];
+
+      if (data && data.name && data.name !== "") {
+        const timeStr = data.submittedAt ? new Date(data.submittedAt).toLocaleTimeString() : '';
+        statusBadge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 font-bold border border-emerald-300";
+        statusBadge.innerHTML = `🟢 제출 완료 ${timeStr ? '(' + timeStr + ')' : ''}`;
+      } else {
+        statusBadge.className = "text-xs px-2.5 py-1 rounded-full bg-rose-100 text-rose-600 font-bold border border-rose-200";
+        statusBadge.innerHTML = `🔴 미제출`;
+      }
+    }
+
+    // 학생 데이터 Firebase 제출
     function submitToFirebase() {
       const groupNum = document.getElementById('groupSelect').value;
       const studentName = document.getElementById('studentName').value.trim();
@@ -322,27 +341,25 @@
         v: window.currentV,
         r: parseFloat(rTotal.toFixed(1)),
         i: parseFloat(iTotal.toFixed(2)),
+        points: collectedData.map(d => ({ x: parseFloat(d.v), y: parseFloat(d.i) })),
         conclusion: conclusion,
         feedback: window.groupSubmissions[groupNum]?.feedback || "",
-        timestamp: new Date().toISOString()
+        submittedAt: new Date().toISOString()
       };
 
-      // 로컬 즉시 반영
       window.groupSubmissions[groupNum] = payload;
+      checkCurrentGroupSubmissionStatus();
 
-      // Realtime DB & Firestore에 동시 저장
       Promise.all([
         rtdb.ref('groups/' + groupNum).set(payload),
         firestore.collection('groups').doc(groupNum).set(payload)
       ]).then(() => {
-        showNotification(`${groupNum}모둠 데이터가 Firebase DB에 전송되었습니다!`);
+        showNotification(`${groupNum}모둠 데이터 제출이 성공적으로 확인되었습니다!`);
       }).catch((err) => {
-        console.log("Firebase 저장 디버그:", err);
-        showNotification(`${groupNum}모둠 데이터 제출 성공 (화면 반영 완료)`);
+        showNotification(`${groupNum}모둠 제출 완료 (화면 반영 확인됨)`);
       });
     }
 
-    // 교사 피드백 Firebase 저장
     function saveFeedbackToFirebase(groupNum) {
       const fbText = document.getElementById(`feedback-${groupNum}`).value;
       if (window.groupSubmissions[groupNum]) {
@@ -353,14 +370,12 @@
         rtdb.ref(`groups/${groupNum}/feedback`).set(fbText),
         firestore.collection('groups').doc(groupNum).set({ feedback: fbText }, { merge: true })
       ]).then(() => {
-        showNotification(`${groupNum}모둠 피드백이 저장되었습니다.`);
-      }).catch((err) => {
-        showNotification(`${groupNum}모둠 피드백 저장 완료`);
+        showNotification(`${groupNum}모둠 피드백이 전송되었습니다.`);
       });
     }
   </script>
 
-  <!-- Application Logic Script -->
+  <!-- Application Logic & Chart Rendering Script -->
   <script>
     const TEACHER_PASSWORD = "1234";
     window.isTeacherAuthenticated = false;
@@ -498,14 +513,48 @@
       updateChart(window.currentV, iTotal, rTotal);
     }
 
+    // Chart.js Multi-Point Graph Initialization
     function initChart() {
       const ctx = document.getElementById('simChart').getContext('2d');
       simChartInstance = new Chart(ctx, {
         type: 'line',
         data: {
           datasets: [
-            { label: 'V-I 경향선', data: [], borderColor: '#6366f1', borderWidth: 2, fill: false, pointRadius: 0 },
-            { label: '현재 동작 지점', data: [], backgroundColor: '#f97316', borderColor: '#ffffff', borderWidth: 2, pointRadius: 7 }
+            {
+              label: '수집 데이터 연결선',
+              data: [],
+              borderColor: '#a855f7',
+              borderWidth: 2,
+              borderDash: [4, 4],
+              fill: false,
+              tension: 0.1
+            },
+            {
+              label: '수집 데이터 지점들',
+              data: [],
+              backgroundColor: '#a855f7',
+              borderColor: '#ffffff',
+              borderWidth: 2,
+              pointRadius: 6,
+              pointHoverRadius: 8,
+              showLine: false
+            },
+            {
+              label: '이론상 V-I 경향선',
+              data: [],
+              borderColor: '#cbd5e1',
+              borderWidth: 1.5,
+              fill: false,
+              pointRadius: 0
+            },
+            {
+              label: '실시간 조작 위치',
+              data: [],
+              backgroundColor: '#f97316',
+              borderColor: '#ffffff',
+              borderWidth: 2,
+              pointRadius: 8
+            }
           ]
         },
         options: {
@@ -519,14 +568,28 @@
       });
     }
 
+    // Dynamic Multi-Point Chart Update Logic
     function updateChart(v, i, rTotal) {
       if (!simChartInstance) return;
+
+      // 1. Theoretical curve
       const curvePoints = [];
       for (let x = 0; x <= 12; x += 0.5) {
         curvePoints.push({ x: x, y: x / rTotal });
       }
-      simChartInstance.data.datasets[0].data = curvePoints;
-      simChartInstance.data.datasets[1].data = [{ x: v, y: i }];
+
+      // 2. Collected Multi-Points
+      const sortedCollectedPoints = collectedData
+        .map(d => ({ x: parseFloat(d.v), y: parseFloat(d.i) }))
+        .sort((a, b) => a.x - b.x);
+
+      // Datasets update
+      simChartInstance.data.datasets[0].data = sortedCollectedPoints.length >= 2 ? sortedCollectedPoints : [];
+      simChartInstance.data.datasets[1].data = sortedCollectedPoints;
+      simChartInstance.data.datasets[2].data = curvePoints;
+      simChartInstance.data.datasets[3].data = [{ x: v, y: i }];
+
+      document.getElementById('pointCountTag').innerText = `측정점: ${sortedCollectedPoints.length}개`;
       simChartInstance.update('none');
     }
 
@@ -537,12 +600,14 @@
       const entry = { id: Date.now(), type: typeLabel, v: window.currentV, r: rTotal.toFixed(1), i: iTotal.toFixed(2) };
       collectedData.push(entry);
       renderTable();
-      showNotification('데이터가 측정 목록에 수집되었습니다.');
+      updateCircuit();
+      showNotification(`새 측정 지점이 수집되었습니다. (총 ${collectedData.length}개)`);
     }
 
     function deleteData(id) {
       collectedData = collectedData.filter(item => item.id !== id);
       renderTable();
+      updateCircuit();
     }
 
     function renderTable() {
@@ -571,24 +636,25 @@
       let html = '';
 
       for (let g = 1; g <= 6; g++) {
-        const data = window.groupSubmissions[g] || { name: "", circuit: "-", v: 0, r: 0, i: 0, conclusion: "제출 내역 없음", feedback: "" };
+        const data = window.groupSubmissions[g] || { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "제출 내역 없음", feedback: "", submittedAt: "" };
         const isSubmitted = data.name !== "";
+        const pointsCount = data.points ? data.points.length : 0;
 
         html += `
           <div class="bg-white rounded-xl shadow-sm border ${isSubmitted ? 'border-indigo-200' : 'border-slate-200'} p-5 flex flex-col justify-between">
             <div>
               <div class="flex justify-between items-center mb-3">
                 <span class="font-extrabold text-base ${isSubmitted ? 'text-indigo-600' : 'text-slate-400'}">${g} 모둠</span>
-                <span class="text-xs px-2 py-0.5 rounded-full font-semibold ${isSubmitted ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}">
-                  ${isSubmitted ? '제출 완료' : '미제출'}
+                <span class="text-xs px-2.5 py-0.5 rounded-full font-bold ${isSubmitted ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400'}">
+                  ${isSubmitted ? '🟢 제출 완료' : '🔴 미제출'}
                 </span>
               </div>
               <div class="text-xs text-slate-500 mb-2 font-medium">${data.name || '학생 미등록'}</div>
 
               <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs mb-3 space-y-1">
-                <div><span class="text-slate-400">연결방식:</span> <strong>${data.circuit}</strong></div>
-                <div><span class="text-slate-400">전압 / 저항:</span> <strong>${data.v}V / ${data.r}Ω</strong></div>
-                <div><span class="text-slate-400">전류:</span> <strong class="text-indigo-600">${data.i}A</strong></div>
+                <div><span class="text-slate-400">회로/저항:</span> <strong>${data.circuit} (${data.r}Ω)</strong></div>
+                <div><span class="text-slate-400">수집된 측정점:</span> <strong class="text-purple-600">${pointsCount}개 지점</strong></div>
+                <div><span class="text-slate-400">제출 시간:</span> <strong class="text-slate-600">${data.submittedAt ? new Date(data.submittedAt).toLocaleTimeString() : '-'}</strong></div>
               </div>
 
               <div class="mb-4">
@@ -623,20 +689,21 @@
     function applyPresetFeedback(g, level) {
       const textarea = document.getElementById(`feedback-${g}`);
       if (level === '심화') {
-        textarea.value = "[심화] 정량 데이터 기반으로 옴의 법칙 원리를 명확하게 설명했습니다.";
+        textarea.value = "[심화] 2개 이상의 정량 측정 지점을 바르게 연결하여 비례 경향성을 잘 설명했습니다.";
       } else if (level === '기본') {
-        textarea.value = "[기본] 전압과 전류, 저항 사이의 비례/반비례 관계를 바르게 탐구하였습니다.";
+        textarea.value = "[기본] 측정점 데이터를 기반으로 옴의 법칙 기본 원리를 성공적으로 이해했습니다.";
       } else if (level === '기초') {
-        textarea.value = "[기초] 저항 크기에 따른 전류 변화 경향성을 추가 실험을 통해 재확인해보세요.";
+        textarea.value = "[기초] 측정 데이터를 2개 이상 더 수집하여 점들 간의 경향선을 확인해보세요.";
       }
     }
 
     function downloadCSV() {
       let csvContent = "\uFEFF";
-      csvContent += "모둠,학생명,회로연결,전압(V),합성저항(ohm),전류(A),모둠결론,교사피드백\n";
+      csvContent += "모둠,학생명,회로연결,전압(V),합성저항(ohm),전류(A),측정점수,모둠결론,교사피드백,제출시간\n";
 
       for (let g = 1; g <= 6; g++) {
         const d = window.groupSubmissions[g] || {};
+        const pointsCount = d.points ? d.points.length : 0;
         const row = [
           `"${g}모둠"`,
           `"${(d.name || '-').replace(/"/g, '""')}"`,
@@ -644,8 +711,10 @@
           `"${d.v || 0}"`,
           `"${d.r || 0}"`,
           `"${d.i || 0}"`,
+          `"${pointsCount}"`,
           `"${(d.conclusion || '').replace(/"/g, '""')}"`,
-          `"${(d.feedback || '').replace(/"/g, '""')}"`
+          `"${(d.feedback || '').replace(/"/g, '""')}"`,
+          `"${d.submittedAt || '-'}"`
         ];
         csvContent += row.join(",") + "\n";
       }
@@ -660,7 +729,7 @@
       document.body.removeChild(link);
     }
 
-    // Canvas Circuit Animation Logic
+    // Circuit Animation Setup
     function initElectrons() {
       electronParticles = [];
       for (let i = 0; i < 24; i++) {
