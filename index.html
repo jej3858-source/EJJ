@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <!-- Firebase Compat SDKs (Realtime Database만 로드) -->
+  <!-- Firebase Compat SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
@@ -219,7 +219,7 @@
         <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
           <i class="fa-solid fa-chalkboard-user text-indigo-600"></i> Firebase 실시간 모둠 모니터링 & AI 피드백
         </h2>
-        <p class="text-xs text-slate-500 mt-1">학생들의 제출 데이터를 실시간으로 모니터링하고 AI 피드백 버튼으로 맞춤 피드백을 생성하세요.</p>
+        <p class="text-xs text-slate-500 mt-1">학생들의 제출 데이터를 실시간으로 모니터링하고 Gemini 2.5 Flash 모델로 맞춤 피드백을 생성하세요.</p>
       </div>
       <button onclick="downloadCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-lg shadow transition-all flex items-center gap-2">
         <i class="fa-solid fa-file-csv"></i> 학생 데이터 CSV 내려받기
@@ -363,7 +363,7 @@
 
       rtdb.ref('groups/' + groupNum).set(payload)
         .then(() => {
-          showNotification(`${groupNum}모둠 데이터 제출이 싱가포르 RTDB에 완료되었습니다!`);
+          showNotification(`${groupNum}모둠 데이터 제출이 RTDB에 완료되었습니다!`);
         })
         .catch((err) => {
           showNotification(`${groupNum}모둠 제출 완료 (화면 반영 확인)`);
@@ -397,7 +397,7 @@
       showNotification("API Key가 새로 설정되었습니다!");
     }
 
-    // Gemini API 연결 AI 자동 피드백 생성 함수 (gemini-1.5-flash 지원 경로 수정)
+    // Gemini 2.5 Flash 모델 연결 AI 자동 피드백 생성 함수
     async function generateAIFeedback(groupNum) {
       const data = window.groupSubmissions[groupNum];
       if (!data || !data.name || data.name === "") {
@@ -433,8 +433,9 @@
 `;
 
       try {
-        // 엔드포인트 호환 가능한 gemini-1.5-flash 지원 모델로 수정
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`, {
+        // gemini-2.5-flash 모델 엔드포인트 호출
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+        const response = await fetch(url, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
@@ -449,10 +450,10 @@
         if (resData.candidates && resData.candidates[0].content.parts[0].text) {
           const aiText = "[AI 피드백] " + resData.candidates[0].content.parts[0].text.trim();
           document.getElementById(`feedback-${groupNum}`).value = aiText;
-          showNotification(`${groupNum}모둠 AI 피드백이 생성되었습니다!`);
+          showNotification(`${groupNum}모둠 AI 피드백이 성공적으로 생성되었습니다!`);
         } else {
           console.error("AI Response Error:", resData);
-          showNotification("AI 피드백 생성 실패 (API 키 및 데이터 확인 필요)");
+          showNotification("AI 피드백 생성 실패 (API 키 및 설정 확인 필요)");
         }
       } catch (error) {
         console.error("AI Fetch Error:", error);
