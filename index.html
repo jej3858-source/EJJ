@@ -412,7 +412,7 @@
       showNotification("API Key가 새로 설정되었습니다!");
     }
 
-    // ✅ 수정된 부분: 프록시 서버 우회 코드가 적용된 API 호출
+    // ✅ 수정된 부분: URL을 올바른 최신 모델(gemini-1.5-flash)로 변경
     async function generateAIFeedback(groupNum) {
       const data = window.groupSubmissions[groupNum];
       if (!data || !data.name || data.name === "") {
@@ -448,7 +448,9 @@
 `;
 
       try {
-        const targetUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+        // ✅ 올바른 모델 주소(gemini-1.5-flash)로 수정됨
+        const targetUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+        
         // CORS 프록시 서버 URL 적용
         const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
