@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>옴의 법칙 탐구 & 교사 대시보드 (Firebase & AI 피드백 연동)</title>
+  <title>옴의 법칙 탐구 (학생용)</title>
   <!-- Tailwind CSS & Chart.js CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -27,29 +27,18 @@
     <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center gap-3">
       <div class="flex items-center gap-3">
         <i class="fa-solid fa-bolt text-amber-300 text-2xl"></i>
-        <h1 class="text-xl md:text-2xl font-bold">옴의 법칙 탐구 & 교사 대시보드</h1>
+        <h1 class="text-xl md:text-2xl font-bold">옴의 법칙 탐구 가상 실험실</h1>
         <!-- Firebase Status Badge -->
         <span id="dbStatusBadge" class="text-xs px-2.5 py-1 rounded-full bg-amber-500/80 text-white font-medium flex items-center gap-1.5 ml-2">
           <span class="w-2 h-2 rounded-full bg-white animate-pulse"></span> DB 연결 확인 중
         </span>
       </div>
-      <div class="flex items-center gap-3">
-        <!-- AI Key Status -->
-        <button id="apiKeyBtn" onclick="openApiKeyModal()" class="hidden px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white transition-all flex items-center gap-1">
-          <i class="fa-solid fa-key"></i> AI Key 연결됨
-        </button>
-        <button onclick="switchView('student')" id="tab-student" class="px-3.5 py-1.5 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all">
-          <i class="fa-solid fa-user-graduate me-1"></i> 학생용 탐구
-        </button>
-        <button onclick="requestTeacherAccess()" id="tab-teacher" class="px-3.5 py-1.5 rounded-lg text-sm font-bold bg-indigo-700 hover:bg-indigo-800 text-white transition-all border border-indigo-500">
-          <i class="fa-solid fa-lock me-1"></i> 교사 대시보드
-        </button>
-      </div>
+      <!-- 교사 탭 전환 버튼 제거됨 -->
     </div>
   </header>
 
-  <!-- ==================== 1. 학생용 탐구 화면 ==================== -->
-  <main id="studentView" class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full flex-1">
+  <!-- ==================== 학생용 탐구 화면 ==================== -->
+  <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 w-full flex-1">
 
     <!-- Left Column: Controls & Circuit Canvas -->
     <section class="lg:col-span-7 flex flex-col gap-6">
@@ -213,68 +202,10 @@
     </section>
   </main>
 
-  <!-- ==================== 2. 교사용 대시보드 화면 ==================== -->
-  <main id="teacherView" class="hidden max-w-7xl mx-auto px-4 py-6 w-full flex-1 flex-col gap-6">
-    
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-chalkboard-user text-indigo-600"></i> Firebase 실시간 모둠 모니터링 & AI 피드백
-        </h2>
-        <p class="text-xs text-slate-500 mt-1">학생들의 제출 데이터를 실시간으로 모니터링하고 AI 피드백 버튼으로 맞춤 피드백을 생성하세요.</p>
-      </div>
-      <button onclick="downloadCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm rounded-lg shadow transition-all flex items-center gap-2">
-        <i class="fa-solid fa-file-csv"></i> 학생 데이터 CSV 내려받기
-      </button>
-    </div>
-
-    <!-- Group Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div id="groupCardsContainer" class="contents"></div>
-    </div>
-  </main>
-
-  <!-- 교사 인증 모달 -->
-  <div id="passwordModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center border border-slate-100">
-      <div class="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
-        <i class="fa-solid fa-key"></i>
-      </div>
-      <h3 class="text-lg font-bold text-slate-800 mb-1">교사용 대시보드 인증</h3>
-      <p class="text-xs text-slate-500 mb-4">교사 전용 비밀번호를 입력해주세요.</p>
-      
-      <input type="password" id="teacherPasswordInput" placeholder="비밀번호 입력" onkeyup="if(event.key==='Enter') verifyPassword()" class="w-full px-4 py-2.5 text-center text-lg font-mono border border-slate-300 rounded-xl focus:outline-none focus:border-indigo-600 mb-4">
-      
-      <div class="flex gap-2">
-        <button onclick="closePasswordModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-all">취소</button>
-        <button onclick="verifyPassword()" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow transition-all">인증 확인</button>
-      </div>
-      <p class="text-[11px] text-slate-400 mt-3">(기본 초기 비밀번호: <code class="font-bold text-indigo-600">1234</code>)</p>
-    </div>
-  </div>
-
-  <!-- AI API Key 변경 모달 -->
-  <div id="apiKeyModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 text-center border border-slate-100">
-      <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-4 text-xl">
-        <i class="fa-solid fa-wand-magic-sparkles"></i>
-      </div>
-      <h3 class="text-lg font-bold text-slate-800 mb-1">Gemini AI API Key 관리</h3>
-      <p class="text-xs text-slate-500 mb-4">연결된 API Key를 수정하시려면 아래에 새로 입력하세요.</p>
-      
-      <input type="text" id="geminiApiKeyInput" placeholder="API Key 입력" class="w-full px-4 py-2.5 text-sm border border-slate-300 rounded-xl focus:outline-none focus:border-indigo-600 mb-4">
-      
-      <div class="flex gap-2">
-        <button onclick="closeApiKeyModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm rounded-xl transition-all">취소</button>
-        <button onclick="saveApiKey()" class="w-1/2 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm rounded-xl shadow transition-all">저장하기</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Firebase 연동 스크립트 및 AI 피드백 부분 -->
+  <!-- Firebase 연동 스크립트 (학생용: 데이터 쓰기 및 상태 확인 전용) -->
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyBwVd1wiSjC0P1aSYvt_gO95YzTi16reSo",
+      apiKey: "AIzaSyBwVd1wiSjC0P1aSYvt_gO95YzTi16reSo", // Firebase 식별용 공개키 (안전)
       authDomain: "ejje-d0631.firebaseapp.com",
       projectId: "ejje-d0631",
       storageBucket: "ejje-d0631.firebasestorage.app",
@@ -288,16 +219,8 @@
     const rtdb = firebase.database();
     const firestore = firebase.firestore();
 
-    window.GEMINI_API_KEY = "AQ.Ab8RN6JBfploKDf4wOKRP3COVyKrk-Iz8o_2iX0_QLW9zGCQ_w";
-
-    window.groupSubmissions = {
-      "1": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
-      "2": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
-      "3": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
-      "4": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
-      "5": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" },
-      "6": { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "아직 제출된 데이터가 없습니다.", feedback: "", submittedAt: "" }
-    };
+    // 임시 캐시용 객체
+    window.groupSubmissions = {};
 
     function initFirebaseSync() {
       const badge = document.getElementById('dbStatusBadge');
@@ -305,27 +228,13 @@
       rtdb.ref('groups').on('value', (snapshot) => {
         const data = snapshot.val();
         if (data) {
-          Object.keys(data).forEach(g => {
-            window.groupSubmissions[g] = data[g];
-          });
+          window.groupSubmissions = data;
           if (badge) {
             badge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-500 text-white font-medium flex items-center gap-1.5 ml-2";
             badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-white"></span> Realtime DB 연결됨`;
           }
           checkCurrentGroupSubmissionStatus();
-          if (window.isTeacherAuthenticated) renderTeacherDashboard();
         }
-      });
-
-      firestore.collection("groups").onSnapshot((snapshot) => {
-        snapshot.forEach((doc) => {
-          const g = doc.id;
-          if (window.groupSubmissions[g]) {
-            window.groupSubmissions[g] = doc.data();
-          }
-        });
-        checkCurrentGroupSubmissionStatus();
-        if (window.isTeacherAuthenticated) renderTeacherDashboard();
       });
     }
 
@@ -357,6 +266,9 @@
       const { rTotal, iTotal } = calculateCircuit();
       const typeLabel = window.circuitType === 'single' ? '단일' : (window.circuitType === 'series' ? '직렬' : '병렬');
 
+      // 재제출 시 기존 교사 피드백이 있다면 보존
+      const existingFeedback = window.groupSubmissions[groupNum]?.feedback || "";
+
       const payload = {
         name: `${groupNum}모둠 (${studentName})`,
         circuit: typeLabel,
@@ -365,139 +277,24 @@
         i: parseFloat(iTotal.toFixed(2)),
         points: collectedData.map(d => ({ x: parseFloat(d.v), y: parseFloat(d.i) })),
         conclusion: conclusion,
-        feedback: window.groupSubmissions[groupNum]?.feedback || "",
+        feedback: existingFeedback,
         submittedAt: new Date().toISOString()
       };
 
-      window.groupSubmissions[groupNum] = payload;
-      checkCurrentGroupSubmissionStatus();
-
+      // Realtime Database 및 Firestore 데이터 저장
       Promise.all([
         rtdb.ref('groups/' + groupNum).set(payload),
         firestore.collection('groups').doc(groupNum).set(payload)
       ]).then(() => {
-        showNotification(`${groupNum}모둠 데이터 제출이 확인되었습니다!`);
+        showNotification(`${groupNum}모둠 데이터 제출이 완료되었습니다!`);
       }).catch((err) => {
-        showNotification(`${groupNum}모둠 제출 완료 (화면 반영 확인됨)`);
+        showNotification("데이터 전송 중 오류가 발생했습니다.");
       });
-    }
-
-    function saveFeedbackToFirebase(groupNum) {
-      const fbText = document.getElementById(`feedback-${groupNum}`).value;
-      if (window.groupSubmissions[groupNum]) {
-        window.groupSubmissions[groupNum].feedback = fbText;
-      }
-
-      Promise.all([
-        rtdb.ref(`groups/${groupNum}/feedback`).set(fbText),
-        firestore.collection('groups').doc(groupNum).set({ feedback: fbText }, { merge: true })
-      ]).then(() => {
-        showNotification(`${groupNum}모둠 피드백이 전송되었습니다.`);
-      });
-    }
-
-    function openApiKeyModal() {
-      document.getElementById('geminiApiKeyInput').value = window.GEMINI_API_KEY;
-      document.getElementById('apiKeyModal').classList.remove('hidden');
-    }
-
-    function closeApiKeyModal() {
-      document.getElementById('apiKeyModal').classList.add('hidden');
-    }
-
-    function saveApiKey() {
-      const key = document.getElementById('geminiApiKeyInput').value.trim();
-      window.GEMINI_API_KEY = key;
-      closeApiKeyModal();
-      showNotification("API Key가 새로 설정되었습니다!");
-    }
-
-    // ✅ 수정된 부분: URL을 올바른 최신 모델(gemini-1.5-flash)로 변경
-    async function generateAIFeedback(groupNum) {
-      const data = window.groupSubmissions[groupNum];
-      if (!data || !data.name || data.name === "") {
-        showNotification("해당 모둠의 제출 데이터가 없습니다.");
-        return;
-      }
-
-      const apiKey = window.GEMINI_API_KEY;
-      if (!apiKey) {
-        openApiKeyModal();
-        showNotification("AI API Key가 필요합니다.");
-        return;
-      }
-
-      const feedbackBtn = document.getElementById(`aiBtn-${groupNum}`);
-      if (feedbackBtn) {
-        feedbackBtn.disabled = true;
-        feedbackBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> 생성 중...`;
-      }
-
-      const promptText = `
-너는 중학교 2학년 과학 교사야. 학생들이 옴의 법칙(전류, 전압, 저항 사이의 관계) 실험 후 제출한 데이터를 바탕으로 친절하고 도움이 되는 과정을 강조하는 피드백을 2-3문장으로 작성해줘.
-
-[학생 제출 데이터]
-- 모둠: ${groupNum}모둠
-- 모둠원: ${data.name}
-- 실험 회로: ${data.circuit} 연결
-- 측정 전압/합성저항/전류: ${data.v}V / ${data.r}Ω / ${data.i}A
-- 수집된 측정점 개수: ${data.points ? data.points.length : 0}개 지점
-- 학생 결론: "${data.conclusion}"
-
-피드백은 칭찬과 함께 옴의 법칙 원리(전압과 전류의 비례 관계, 저항과 전류의 반비례 관계)를 정확히 반영하여 따뜻하고 격려하는 말투로 작성해줘.
-`;
-
-      try {
-        // ✅ 올바른 모델 주소(gemini-1.5-flash)로 수정됨
-        const targetUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-        
-        // CORS 프록시 서버 URL 적용
-        const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
-
-        const response = await fetch(proxyUrl, {
-          method: "POST",
-          headers: { 
-            "Content-Type": "application/json",
-            "X-goog-api-key": apiKey
-          },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: promptText }] }]
-          })
-        });
-
-        const resData = await response.json();
-        
-        if (resData.error) {
-           console.error("API Error:", resData.error);
-           showNotification("API 요청 실패: " + resData.error.message);
-           return;
-        }
-
-        if (resData.candidates && resData.candidates[0].content.parts[0].text) {
-          const aiText = "[AI 피드백] " + resData.candidates[0].content.parts[0].text.trim();
-          document.getElementById(`feedback-${groupNum}`).value = aiText;
-          showNotification(`${groupNum}모둠 AI 피드백이 생성되었습니다!`);
-        } else {
-          console.error("AI Response Error:", resData);
-          showNotification("AI 피드백 생성 실패 (API 키 및 응답을 확인해주세요)");
-        }
-      } catch (error) {
-        console.error("AI Fetch Error:", error);
-        showNotification("AI 호출 중 오류가 발생했습니다. (네트워크 상태 확인)");
-      } finally {
-        if (feedbackBtn) {
-          feedbackBtn.disabled = false;
-          feedbackBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> AI 피드백 생성`;
-        }
-      }
     }
   </script>
 
   <!-- 앱 및 차트 로직 스크립트 -->
   <script>
-    const TEACHER_PASSWORD = "1234";
-    window.isTeacherAuthenticated = false;
-
     window.circuitType = 'single';
     window.currentV = 6.0;
     window.currentR1 = 10.0;
@@ -515,54 +312,6 @@
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 300);
       }, 2500);
-    }
-
-    function requestTeacherAccess() {
-      if (window.isTeacherAuthenticated) {
-        switchView('teacher');
-      } else {
-        document.getElementById('passwordModal').classList.remove('hidden');
-        document.getElementById('teacherPasswordInput').focus();
-      }
-    }
-
-    function verifyPassword() {
-      const input = document.getElementById('teacherPasswordInput').value;
-      if (input === TEACHER_PASSWORD) {
-        window.isTeacherAuthenticated = true;
-        closePasswordModal();
-        switchView('teacher');
-        document.getElementById('apiKeyBtn').classList.remove('hidden');
-        showNotification('교사 대시보드 인증 성공!');
-      } else {
-        showNotification('비밀번호가 올바르지 않습니다.');
-        document.getElementById('teacherPasswordInput').value = '';
-      }
-    }
-
-    function closePasswordModal() {
-      document.getElementById('passwordModal').classList.add('hidden');
-      document.getElementById('teacherPasswordInput').value = '';
-    }
-
-    function switchView(view) {
-      const studentView = document.getElementById('studentView');
-      const teacherView = document.getElementById('teacherView');
-      const tabStudent = document.getElementById('tab-student');
-      const tabTeacher = document.getElementById('tab-teacher');
-
-      if (view === 'student') {
-        studentView.classList.remove('hidden');
-        teacherView.classList.add('hidden');
-        tabStudent.className = 'px-3.5 py-1.5 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all';
-        tabTeacher.className = 'px-3.5 py-1.5 rounded-lg text-sm font-bold bg-indigo-700 hover:bg-indigo-800 text-white transition-all border border-indigo-500';
-      } else {
-        studentView.classList.add('hidden');
-        teacherView.classList.remove('hidden');
-        tabStudent.className = 'px-3.5 py-1.5 rounded-lg text-sm font-bold bg-indigo-700 hover:bg-indigo-800 text-white transition-all border border-indigo-500';
-        tabTeacher.className = 'px-3.5 py-1.5 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all';
-        renderTeacherDashboard();
-      }
     }
 
     function calculateCircuit() {
@@ -743,109 +492,6 @@
           </td>
         </tr>
       `).join('');
-    }
-
-    function renderTeacherDashboard() {
-      const container = document.getElementById('groupCardsContainer');
-      let html = '';
-
-      for (let g = 1; g <= 6; g++) {
-        const data = window.groupSubmissions[g] || { name: "", circuit: "-", v: 0, r: 0, i: 0, points: [], conclusion: "제출 내역 없음", feedback: "", submittedAt: "" };
-        const isSubmitted = data.name !== "";
-        const pointsCount = data.points ? data.points.length : 0;
-
-        html += `
-          <div class="bg-white rounded-xl shadow-sm border ${isSubmitted ? 'border-indigo-200' : 'border-slate-200'} p-5 flex flex-col justify-between">
-            <div>
-              <div class="flex justify-between items-center mb-3">
-                <span class="font-extrabold text-base ${isSubmitted ? 'text-indigo-600' : 'text-slate-400'}">${g} 모둠</span>
-                <span class="text-xs px-2.5 py-0.5 rounded-full font-bold ${isSubmitted ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400'}">
-                  ${isSubmitted ? '🟢 제출 완료' : '🔴 미제출'}
-                </span>
-              </div>
-              <div class="text-xs text-slate-500 mb-2 font-medium">${data.name || '학생 미등록'}</div>
-
-              <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-xs mb-3 space-y-1">
-                <div><span class="text-slate-400">회로/저항:</span> <strong>${data.circuit} (${data.r}Ω)</strong></div>
-                <div><span class="text-slate-400">수집된 측정점:</span> <strong class="text-purple-600">${pointsCount}개 지점</strong></div>
-                <div><span class="text-slate-400">제출 시간:</span> <strong class="text-slate-600">${data.submittedAt ? new Date(data.submittedAt).toLocaleTimeString() : '-'}</strong></div>
-              </div>
-
-              <div class="mb-4">
-                <div class="text-xs font-bold text-slate-700 mb-1">모둠 서술형 결론:</div>
-                <div class="text-xs text-slate-600 bg-amber-50/50 p-2.5 rounded-lg border border-amber-100 min-h-[50px] leading-relaxed">
-                  ${data.conclusion}
-                </div>
-              </div>
-            </div>
-
-            <div class="pt-3 border-t border-slate-100">
-              <div class="flex justify-between items-center mb-1.5">
-                <label class="block text-xs font-bold text-slate-700">교사 피드백 입력</label>
-                <button id="aiBtn-${g}" onclick="generateAIFeedback('${g}')" class="text-[11px] px-2.5 py-1 bg-gradient-to-r from-amber-500 to-indigo-600 hover:from-amber-600 hover:to-indigo-700 text-white font-bold rounded-lg shadow-sm transition-all flex items-center gap-1">
-                  <i class="fa-solid fa-wand-magic-sparkles"></i> AI 피드백 생성
-                </button>
-              </div>
-              
-              <div class="flex gap-1 mb-2">
-                <button onclick="applyPresetFeedback('${g}', '심화')" class="text-[10px] px-2 py-1 bg-indigo-50 text-indigo-700 rounded border border-indigo-200 hover:bg-indigo-100">심화</button>
-                <button onclick="applyPresetFeedback('${g}', '기본')" class="text-[10px] px-2 py-1 bg-emerald-50 text-emerald-700 rounded border border-emerald-200 hover:bg-emerald-100">기본</button>
-                <button onclick="applyPresetFeedback('${g}', '기초')" class="text-[10px] px-2 py-1 bg-amber-50 text-amber-700 rounded border border-amber-200 hover:bg-amber-100">기초</button>
-              </div>
-
-              <textarea id="feedback-${g}" rows="3" placeholder="피드백을 직접 입력하거나 AI 버튼을 눌러 생성하세요..." class="w-full text-xs p-2 rounded-lg border border-slate-300 focus:outline-none focus:border-indigo-500 mb-2">${data.feedback || ''}</textarea>
-              <button onclick="saveFeedbackToFirebase('${g}')" class="w-full py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-lg transition-all">
-                Firebase로 피드백 전송
-              </button>
-            </div>
-          </div>
-        `;
-      }
-
-      container.innerHTML = html;
-    }
-
-    function applyPresetFeedback(g, level) {
-      const textarea = document.getElementById(`feedback-${g}`);
-      if (level === '심화') {
-        textarea.value = "[심화] 2개 이상의 정량 측정 지점을 바르게 연결하여 비례 경향성을 잘 설명했습니다.";
-      } else if (level === '기본') {
-        textarea.value = "[기본] 측정점 데이터를 기반으로 옴의 법칙 기본 원리를 성공적으로 이해했습니다.";
-      } else if (level === '기초') {
-        textarea.value = "[기초] 측정 데이터를 2개 이상 더 수집하여 점들 간의 경향선을 확인해보세요.";
-      }
-    }
-
-    function downloadCSV() {
-      let csvContent = "\uFEFF";
-      csvContent += "모둠,학생명,회로연결,전압(V),합성저항(ohm),전류(A),측정점수,모둠결론,교사피드백,제출시간\n";
-
-      for (let g = 1; g <= 6; g++) {
-        const d = window.groupSubmissions[g] || {};
-        const pointsCount = d.points ? d.points.length : 0;
-        const row = [
-          `"${g}모둠"`,
-          `"${(d.name || '-').replace(/"/g, '""')}"`,
-          `"${d.circuit || '-'}"`,
-          `"${d.v || 0}"`,
-          `"${d.r || 0}"`,
-          `"${d.i || 0}"`,
-          `"${pointsCount}"`,
-          `"${(d.conclusion || '').replace(/"/g, '""')}"`,
-          `"${(d.feedback || '').replace(/"/g, '""')}"`,
-          `"${d.submittedAt || '-'}"`
-        ];
-        csvContent += row.join(",") + "\n";
-      }
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `옴의법칙_Firebase_학급데이터_${new Date().toISOString().slice(0,10)}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
     }
 
     // Circuit Animation Setup
